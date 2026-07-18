@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COMPOSIZIONE — Nutrizionista Sportivo AI</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#14171A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Composizione">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14171A;
+    --surface:#1C2024;
+    --surface-2:#23272C;
+    --border:#2E3338;
+    --text:#EDEEF0;
+    --muted:#8B939B;
+    --protein:#B4FF39;
+    --carbs:#FFB020;
+    --fat:#4FD1C5;
+    --kcal:#F2F4F6;
+    --danger:#FF6B6B;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;line-height:1.5;}
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif;margin:0;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  button{font-family:'Inter',sans-serif;cursor:pointer;border:none;border-radius:8px;padding:10px 16px;font-weight:600;font-size:14px;transition:transform .1s ease, opacity .15s ease;}
+  button:active{transform:scale(.97);}
+  button.primary{background:var(--protein);color:#0E1300;}
+  button.ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
+  button.ghost:hover{border-color:var(--muted);}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  input,textarea,select{background:var(--surface-2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 11px;font-family:'Inter',sans-serif;font-size:14px;width:100%;}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--protein);outline-offset:1px;}
+  label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:5px;}
+  .field{margin-bottom:12px;}
+  .row{display:flex;gap:12px;}
+  .row > *{flex:1;}
+
+  header{border-bottom:1px solid var(--border);padding:22px 28px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:rgba(20,23,26,.9);backdrop-filter:blur(6px);z-index:10;}
+  header .eyebrow{color:var(--muted);font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;}
+  header h1{font-size:20px;letter-spacing:-.01em;}
+  header .actions{display:flex;gap:10px;}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:28px;display:grid;grid-template-columns:340px 1fr;gap:24px;}
+  @media (max-width:900px){.wrap{grid-template-columns:1fr;}}
+
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;}
+  .panel h2{font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:16px;}
+
+  details.panel{padding:0;overflow:hidden;}
+  details.panel summary{list-style:none;cursor:pointer;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;user-select:none;}
+  details.panel summary::-webkit-details-marker{display:none;}
+  details.panel summary h2{margin-bottom:0;}
+  details.panel summary::after{content:'';width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .2s ease;margin-left:12px;flex-shrink:0;}
+  details.panel[open] summary::after{transform:rotate(-135deg);}
+  details.panel summary:hover h2{color:var(--text);}
+  details.panel .panel-body{padding:0 20px 20px;}
+  details.panel summary .summary-hint{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;margin-left:auto;margin-right:10px;}
+
+  /* instrument gauges */
+  .gauges{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+  .gauge{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 14px;}
+  .gauge .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+  .gauge .nums{font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;margin-bottom:10px;}
+  .gauge .nums small{font-size:12px;color:var(--muted);font-weight:400;}
+  .bar{height:6px;background:var(--surface-2);border-radius:4px;overflow:hidden;}
+  .bar > div{height:100%;border-radius:4px;transition:width .4s ease;}
+  .gauge.kcal .bar>div{background:var(--kcal);}
+  .gauge.protein .bar>div{background:var(--protein);}
+  .gauge.carbs .bar>div{background:var(--carbs);}
+  .gauge.fat .bar>div{background:var(--fat);}
+  .gauge.over .nums{color:var(--danger);}
+
+  .banner{background:linear-gradient(90deg,rgba(180,255,57,.1),transparent);border:1px solid var(--protein);border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+  .banner p{margin:0;font-size:13.5px;}
+  .banner strong{color:var(--protein);}
+
+  .chat{display:flex;flex-direction:column;gap:14px;max-height:520px;overflow-y:auto;padding:4px 2px;margin-bottom:16px;}
+  .msg{max-width:88%;padding:12px 14px;border-radius:10px;font-size:14px;white-space:pre-wrap;}
+  .msg.user{align-self:flex-end;background:var(--surface-2);border:1px solid var(--border);}
+  .msg.ai{align-self:flex-start;background:rgba(180,255,57,.06);border:1px solid rgba(180,255,57,.25);}
+  .msg .tag{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px;font-family:'JetBrains Mono',monospace;}
+  .msg.ai .tag{color:var(--protein);}
+  .msg .macropill{display:inline-flex;gap:8px;margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);flex-wrap:wrap;}
+  .msg .macropill span{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;}
+
+  .composer{display:flex;gap:10px;}
+  .composer textarea{resize:none;height:52px;}
+
+  details summary{cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:10px;}
+  .small{font-size:12px;color:var(--muted);}
+  .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
+  .status-dot.on{background:var(--protein);}
+  .status-dot.off{background:var(--danger);}
+
+  .weeklylog{display:flex;flex-direction:column;gap:8px;max-height:160px;overflow-y:auto;}
+  .weeklylog .entry{border-bottom:1px solid var(--border);padding:8px 0;font-size:13px;}
+  .weeklylog .entry .d{font-family:'JetBrains Mono',monospace;color:var(--muted);font-size:11px;}
+
+  /* calendar */
+  .cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .cal-header .navbtn{background:var(--surface-2);border:1px solid var(--border);color:var(--text);width:30px;height:30px;border-radius:6px;padding:0;display:flex;align-items:center;justify-content:center;font-size:15px;}
+  .cal-header .monthlabel{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted);text-transform:capitalize;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px;}
+  .cal-dow{font-size:10px;color:var(--muted);text-align:center;text-transform:uppercase;font-family:'JetBrains Mono',monospace;padding-bottom:4px;}
+  .cal-day{aspect-ratio:1;border-radius:6px;border:1px solid transparent;background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;cursor:pointer;position:relative;color:var(--text);}
+  .cal-day.empty{background:transparent;cursor:default;}
+  .cal-day.has-data{border-color:rgba(180,255,57,.35);}
+  .cal-day.has-data::after{content:'';width:4px;height:4px;border-radius:50%;background:var(--protein);position:absolute;bottom:4px;}
+  .cal-day.selected{background:var(--protein);color:#0E1300;font-weight:700;}
+  .cal-day.today-marker{outline:1px dashed var(--muted);}
+  .cal-day:hover{border-color:var(--muted);}
+  #dayDetail{border-top:1px solid var(--border);padding-top:14px;}
+  #dayDetail .dd-title{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-bottom:8px;}
+  #dayDetail .dd-macros{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-family:'JetBrains Mono',monospace;font-size:12px;}
+  #dayDetail .dd-macros span{background:var(--surface-2);border:1px solid var(--border);padding:3px 8px;border-radius:6px;}
+  #dayDetail .dd-entries{display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;}
+  #dayDetail .dd-entry{font-size:13px;border-bottom:1px solid var(--border);padding-bottom:6px;}
+  #dayDetail .dd-entry .dd-macropill{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);margin-top:3px;}
+
+  /* meal suggestions */
+  .sugg-controls{display:flex;gap:10px;margin-bottom:14px;}
+  .sugg-controls select{flex:1;}
+  .sugg-cards{display:flex;flex-direction:column;gap:12px;}
+  .sugg-card{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;}
+  .sugg-card h3{font-size:14.5px;margin-bottom:6px;}
+  .sugg-card p{font-size:13px;color:var(--muted);margin:0 0 10px;}
+  .sugg-card .macropill{display:flex;gap:8px;flex-wrap:wrap;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);margin-bottom:10px;}
+  .sugg-card .macropill span{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:2px 7px;}
+  .sugg-card button{font-size:12.5px;padding:7px 12px;}
+
+  #fileInput{display:none;}
+  .loading{display:inline-flex;gap:4px;align-items:center;}
+  .loading span{width:5px;height:5px;border-radius:50%;background:var(--protein);animation:pulse 1s infinite ease-in-out;}
+  .loading span:nth-child(2){animation-delay:.15s;}
+  .loading span:nth-child(3){animation-delay:.3s;}
+  @keyframes pulse{0%,80%,100%{opacity:.2;transform:scale(.7);}40%{opacity:1;transform:scale(1);}}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="eyebrow">Ricomposizione corporea · Definizione</div>
+    <h1>COMPOSIZIONE <span class="mono" style="color:var(--muted);font-weight:400;">// coach AI</span></h1>
+  </div>
+  <div class="actions">
+    <button class="primary" id="btnInstall" style="display:none;">📲 Installa app</button>
+    <button class="ghost" id="btnExport">Esporta profilo JSON</button>
+    <button class="ghost" id="btnImportTrigger">Importa profilo</button>
+    <input type="file" id="fileInput" accept="application/json">
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- LEFT COLUMN: profile & setup -->
+  <div>
+    <details class="panel" open id="panelGemini">
+      <summary><h2>Connessione Gemini</h2><span class="summary-hint" id="hintGemini"></span></summary>
+      <div class="panel-body">
+      <div class="field">
+        <label>Chiave API Gemini</label>
+        <input type="password" id="apiKey" placeholder="incolla qui la tua API key">
+      </div>
+      <div class="field">
+        <label>Modello</label>
+        <input type="text" id="model" value="gemini-2.5-flash">
+        <div class="small" style="margin-top:5px;">Ottieni una chiave gratuita su aistudio.google.com. La chiave resta solo nel tuo browser (localStorage), non viene mai inviata altrove.</div>
+      </div>
+      <div><span class="status-dot off" id="statusDot"></span><span class="small" id="statusText">Chiave non impostata</span></div>
+      </div>
+    </details>
+
+    <details class="panel" open id="panelProfilo">
+      <summary><h2>Il tuo profilo</h2><span class="summary-hint" id="hintProfilo"></span></summary>
+      <div class="panel-body">
+      <div class="row">
+        <div class="field"><label>Età</label><input type="number" id="age"></div>
+        <div class="field"><label>Sesso</label>
+          <select id="sex"><option value="uomo">Uomo</option><option value="donna">Donna</option></select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Peso (kg)</label><input type="number" step="0.1" id="weight"></div>
+        <div class="field"><label>Altezza (cm)</label><input type="number" id="height"></div>
+      </div>
+      <div class="field">
+        <label>Livello attività</label>
+        <select id="activity">
+          <option value="sedentario">Sedentario</option>
+          <option value="leggero">Leggero (1-3 allenamenti/sett)</option>
+          <option value="moderato" selected>Moderato (3-5 allenamenti/sett)</option>
+          <option value="alto">Alto (6-7 allenamenti/sett)</option>
+          <option value="atleta">Atleta / molto intenso</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Obiettivo</label>
+        <input type="text" id="goal" value="Dimagrimento (definizione) preservando la massa magra">
+      </div>
+      <div class="field">
+        <label>Schede alimentari passate / contesto storico</label>
+        <textarea id="history" rows="4" placeholder="Incolla qui le tue vecchie schede, macro e approcci passati..."></textarea>
+      </div>
+      <button class="primary" id="btnSaveProfile" style="width:100%;">Salva profilo</button>
+      </div>
+    </details>
+
+    <details class="panel" open id="panelTarget">
+      <summary><h2>Target giornalieri</h2><span class="summary-hint" id="hintTarget"></span></summary>
+      <div class="panel-body">
+      <div class="row">
+        <div class="field"><label>Kcal</label><input type="number" id="tKcal"></div>
+        <div class="field"><label>Proteine (g)</label><input type="number" id="tProtein"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Carboidrati (g)</label><input type="number" id="tCarbs"></div>
+        <div class="field"><label>Grassi (g)</label><input type="number" id="tFat"></div>
+      </div>
+      <button class="ghost" id="btnSuggestTargets" style="width:100%;">Chiedi all'AI di proporre i target</button>
+      </div>
+    </details>
+
+    <div class="panel">
+      <h2>Calendario giornate</h2>
+      <div class="cal-header">
+        <button class="navbtn" id="calPrev">‹</button>
+        <div class="monthlabel" id="calMonthLabel">-</div>
+        <button class="navbtn" id="calNext">›</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div id="dayDetail"></div>
+    </div>
+
+    <details class="panel" open id="panelCheck">
+      <summary><h2>Check settimanale</h2><span class="summary-hint" id="hintCheck"></span></summary>
+      <div class="panel-body">
+      <div class="weeklylog" id="weeklyLog"><div class="small">Nessun check ancora registrato.</div></div>
+      <div class="field" style="margin-top:12px;">
+        <label>Peso attuale (kg)</label>
+        <input type="number" step="0.1" id="checkWeight">
+      </div>
+      <div class="field">
+        <label>Note (energia, sonno, sensazioni)</label>
+        <textarea id="checkNotes" rows="2"></textarea>
+      </div>
+      <button class="ghost" id="btnCheck" style="width:100%;">Registra check settimanale</button>
+      </div>
+    </details>
+  </div>
+
+  <!-- RIGHT COLUMN: instrument panel + chat -->
+  <div>
+    <div class="banner" id="checkBanner" style="display:none;">
+      <p>📋 Sono passati <strong id="daysSinceCheck">7</strong> giorni dall'ultimo check. Registra peso e sensazioni per valutare eventuali aggiustamenti.</p>
+      <button class="primary" id="btnScrollCheck">Vai al check</button>
+    </div>
+
+    <div class="gauges">
+      <div class="gauge kcal" id="gKcal"><div class="label">Kcal</div><div class="nums"><span id="vKcal">0</span> <small>/ <span id="tKcalShow">-</span></small></div><div class="bar"><div id="bKcal" style="width:0%"></div></div></div>
+      <div class="gauge protein" id="gProtein"><div class="label">Proteine</div><div class="nums"><span id="vProtein">0</span>g <small>/ <span id="tProteinShow">-</span>g</small></div><div class="bar"><div id="bProtein" style="width:0%"></div></div></div>
+      <div class="gauge carbs" id="gCarbs"><div class="label">Carboidrati</div><div class="nums"><span id="vCarbs">0</span>g <small>/ <span id="tCarbsShow">-</span>g</small></div><div class="bar"><div id="bCarbs" style="width:0%"></div></div></div>
+      <div class="gauge fat" id="gFat"><div class="label">Grassi</div><div class="nums"><span id="vFat">0</span>g <small>/ <span id="tFatShow">-</span>g</small></div><div class="bar"><div id="bFat" style="width:0%"></div></div></div>
+    </div>
+
+    <div class="panel">
+      <h2>Suggerimenti pasto</h2>
+      <div class="sugg-controls">
+        <select id="suggMealType">
+          <option value="colazione">Colazione</option>
+          <option value="pranzo" selected>Pranzo</option>
+          <option value="cena">Cena</option>
+          <option value="spuntino">Spuntino</option>
+        </select>
+        <button class="primary" id="btnSuggMeal">Proponi idee</button>
+      </div>
+      <div class="sugg-cards" id="suggCards">
+        <div class="small">Premi "Proponi idee" per ricevere 3 idee di pasto calcolate sui macro che ti restano oggi.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Diario alimentare — oggi</h2>
+      <div class="chat" id="chatLog">
+        <div class="msg ai"><div class="tag">Coach AI</div>Ciao! Sono il tuo nutrizionista sportivo AI. Compila il profilo a sinistra, imposta i target (o chiedimi di proporteli), poi scrivimi qui cosa mangi durante la giornata: calcolerò i macro rimanenti e ti proporrò i pasti successivi per restare in target.</div>
+      </div>
+      <div class="composer">
+        <textarea id="mealInput" placeholder="Es: ho mangiato 150g di petto di pollo, 80g di riso e verdure miste..."></textarea>
+        <button class="primary" id="btnSend">Invia</button>
+      </div>
+      <div style="margin-top:10px;">
+        <button class="ghost" id="btnResetDay">Reset giornata</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DEFAULT_SYSTEM_ROLE = `Agisci come un Nutrizionista Sportivo esperto, specializzato in ricomposizione corporea e bodybuilding. L'obiettivo attuale dell'utente è il dimagrimento (definizione), preservando al massimo la massa magra.
+
+Regole di collaborazione:
+1. ARCHIVIO STORICO: ti verrà fornito il contesto di vecchie schede alimentari, macro, calorie e approcci passati.
+2. DIARIO ALIMENTARE IN TEMPO REALE: l'utente scrive cosa mangia durante la giornata. I pasti possono uscire dal piano o essere "liberi".
+3. CORREZIONI FLUIDE: quando arriva un nuovo pasto, calcola i macro/kcal rimanenti della giornata e proponi opzioni concrete per i pasti successivi, assicurandoti che l'utente rientri nei target giornalieri mantenendo un'alimentazione corretta e bilanciata.
+4. MONITORAGGIO ATTIVO: sii proattivo nel ricordare check periodici su peso e andamento generale.
+
+Sii diretto, concreto, pratico. Dai numeri precisi. Tono da coach competente, non generico.`;
+
+let state = {
+  profile:{age:'',sex:'uomo',weight:'',height:'',activity:'moderato',goal:'',history:'', apiKey:'', model:'gemini-2.5-flash'},
+  targets:{kcal:'',protein:'',carbs:'',fat:''},
+  diary:{}, // dateKey -> {entries:[], totals:{kcal,protein,carbs,fat}}
+  weeklyChecks:[],
+  chatHistory:[]
+};
+let calViewDate = new Date(); // mese attualmente mostrato nel calendario
+let calSelectedDate = todayKey();
+
+function todayKey(){ return new Date().toISOString().slice(0,10); }
+function emptyDay(){ return {entries:[], totals:{kcal:0,protein:0,carbs:0,fat:0}}; }
+function getDay(dateKey){
+  if(!state.diary[dateKey]) state.diary[dateKey] = emptyDay();
+  return state.diary[dateKey];
+}
+function today(){ return getDay(todayKey()); }
+
+// ---------- persistence ----------
+function loadState(){
+  const raw = localStorage.getItem('nutriProfileState');
+  if(raw){
+    try{
+      const parsed = JSON.parse(raw);
+      // migrazione da vecchio formato con "today" singolo
+      if(parsed.today && !parsed.diary){
+        parsed.diary = {};
+        parsed.diary[parsed.today.date] = {entries: parsed.today.entries, totals: parsed.today.totals};
+        delete parsed.today;
+      }
+      state = Object.assign(state, parsed);
+      if(!state.diary) state.diary = {};
+    }catch(e){ console.error('stato corrotto', e); }
+  }
+  applyStateToUI();
+}
+function saveState(){
+  localStorage.setItem('nutriProfileState', JSON.stringify(state));
+}
+
+function applyStateToUI(){
+  document.getElementById('apiKey').value = state.profile.apiKey || '';
+  document.getElementById('model').value = state.profile.model || 'gemini-2.5-flash';
+  document.getElementById('age').value = state.profile.age || '';
+  document.getElementById('sex').value = state.profile.sex || 'uomo';
+  document.getElementById('weight').value = state.profile.weight || '';
+  document.getElementById('height').value = state.profile.height || '';
+  document.getElementById('activity').value = state.profile.activity || 'moderato';
+  document.getElementById('goal').value = state.profile.goal || '';
+  document.getElementById('history').value = state.profile.history || '';
+  document.getElementById('tKcal').value = state.targets.kcal || '';
+  document.getElementById('tProtein').value = state.targets.protein || '';
+  document.getElementById('tCarbs').value = state.targets.carbs || '';
+  document.getElementById('tFat').value = state.targets.fat || '';
+  updateStatusDot();
+  renderGauges();
+  renderChat();
+  renderWeeklyLog();
+  checkBannerLogic();
+  renderCalendar();
+}
+
+function updateStatusDot(){
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  if(state.profile.apiKey){ dot.className='status-dot on'; txt.textContent='Connesso a Gemini'; }
+  else { dot.className='status-dot off'; txt.textContent='Chiave non impostata'; }
+  updateHints();
+}
+
+function updateHints(){
+  const p = state.profile, t = state.targets;
+  document.getElementById('hintGemini').textContent = p.apiKey ? `● ${p.model||'gemini-2.5-flash'}` : 'non connesso';
+  document.getElementById('hintProfilo').textContent = (p.age && p.weight) ? `${p.age} anni · ${p.weight}kg · ${p.height||'?'}cm` : 'da compilare';
+  document.getElementById('hintTarget').textContent = t.kcal ? `${t.kcal} kcal · P${t.protein||0}/C${t.carbs||0}/G${t.fat||0}` : 'da impostare';
+  const lastCheck = state.weeklyChecks.length ? state.weeklyChecks[state.weeklyChecks.length-1] : null;
+  document.getElementById('hintCheck').textContent = lastCheck ? `ultimo: ${lastCheck.date} · ${lastCheck.weight}kg` : 'nessun check';
+}
+
+// ---------- gauges ----------
+function renderGauges(){
+  const t = state.targets, s = today().totals;
+  const map = [
+    ['Kcal','vKcal','tKcalShow','bKcal','gKcal','kcal'],
+    ['Proteine','vProtein','tProteinShow','bProtein','gProtein','protein'],
+    ['Carboidrati','vCarbs','tCarbsShow','bCarbs','gCarbs','carbs'],
+    ['Grassi','vFat','tFatShow','bFat','gFat','fat'],
+  ];
+  map.forEach(([label,vId,tId,bId,gId,key])=>{
+    document.getElementById(vId).textContent = Math.round(s[key]||0);
+    document.getElementById(tId).textContent = t[key] ? t[key] : '-';
+    const pct = t[key] ? Math.min(100,(s[key]/t[key])*100) : 0;
+    document.getElementById(bId).style.width = pct+'%';
+    const over = t[key] && s[key] > t[key];
+    document.getElementById(gId).classList.toggle('over', !!over);
+  });
+}
+
+// ---------- chat rendering ----------
+function renderChat(){
+  const log = document.getElementById('chatLog');
+  log.innerHTML='';
+  if(state.chatHistory.length===0){
+    log.innerHTML = '<div class="msg ai"><div class="tag">Coach AI</div>Ciao! Scrivimi cosa mangi oggi e ti aiuto a restare in target.</div>';
+  }
+  state.chatHistory.forEach(m=>{
+    const div = document.createElement('div');
+    div.className = 'msg '+(m.role==='user'?'user':'ai');
+    let html = `<div class="tag">${m.role==='user'?'Tu':'Coach AI'}</div>${escapeHtml(m.text)}`;
+    if(m.macros){
+      html += `<div class="macropill">
+        <span>kcal ${m.macros.kcal}</span>
+        <span>P ${m.macros.protein}g</span>
+        <span>C ${m.macros.carbs}g</span>
+        <span>G ${m.macros.fat}g</span>
+      </div>`;
+    }
+    div.innerHTML = html;
+    log.appendChild(div);
+  });
+  log.scrollTop = log.scrollHeight;
+}
+function escapeHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderWeeklyLog(){
+  const el = document.getElementById('weeklyLog');
+  if(state.weeklyChecks.length===0){ el.innerHTML = '<div class="small">Nessun check ancora registrato.</div>'; return; }
+  el.innerHTML = state.weeklyChecks.slice().reverse().map(c=>`
+    <div class="entry"><div class="d">${c.date}</div>Peso: ${c.weight}kg — ${escapeHtml(c.notes||'')}</div>
+  `).join('');
+}
+
+// ---------- calendario ----------
+const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+const DOW = ['L','M','M','G','V','S','D'];
+
+function renderCalendar(){
+  const y = calViewDate.getFullYear(), m = calViewDate.getMonth();
+  document.getElementById('calMonthLabel').textContent = MESI[m]+' '+y;
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  DOW.forEach(d=>{
+    const el = document.createElement('div');
+    el.className='cal-dow'; el.textContent=d;
+    grid.appendChild(el);
+  });
+
+  const firstDay = new Date(y,m,1);
+  let startOffset = firstDay.getDay()-1; if(startOffset<0) startOffset=6; // lunedì=0
+  const daysInMonth = new Date(y,m+1,0).getDate();
+
+  for(let i=0;i<startOffset;i++){
+    const el = document.createElement('div');
+    el.className='cal-day empty';
+    grid.appendChild(el);
+  }
+  for(let d=1; d<=daysInMonth; d++){
+    const dateKey = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const el = document.createElement('div');
+    el.className='cal-day';
+    if(state.diary[dateKey] && state.diary[dateKey].entries.length>0) el.classList.add('has-data');
+    if(dateKey===todayKey()) el.classList.add('today-marker');
+    if(dateKey===calSelectedDate) el.classList.add('selected');
+    el.textContent = d;
+    el.addEventListener('click', ()=>{ calSelectedDate = dateKey; renderCalendar(); renderDayDetail(); });
+    grid.appendChild(el);
+  }
+  renderDayDetail();
+}
+
+function renderDayDetail(){
+  const dd = document.getElementById('dayDetail');
+  const day = state.diary[calSelectedDate];
+  const label = calSelectedDate===todayKey() ? 'Oggi · '+calSelectedDate : calSelectedDate;
+  if(!day || day.entries.length===0){
+    dd.innerHTML = `<div class="dd-title">${label}</div><div class="small">Nessun pasto registrato in questa giornata.</div>`;
+    return;
+  }
+  const t = day.totals;
+  dd.innerHTML = `
+    <div class="dd-title">${label}</div>
+    <div class="dd-macros">
+      <span>kcal ${Math.round(t.kcal)}</span>
+      <span>P ${Math.round(t.protein)}g</span>
+      <span>C ${Math.round(t.carbs)}g</span>
+      <span>G ${Math.round(t.fat)}g</span>
+    </div>
+    <div class="dd-entries">
+      ${day.entries.map(e=>`
+        <div class="dd-entry">${escapeHtml(e.text)}
+          <div class="dd-macropill">kcal ${Math.round(e.kcal)} · P ${Math.round(e.protein)}g · C ${Math.round(e.carbs)}g · G ${Math.round(e.fat)}g</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+document.getElementById('calPrev').addEventListener('click', ()=>{
+  calViewDate.setMonth(calViewDate.getMonth()-1);
+  renderCalendar();
+});
+document.getElementById('calNext').addEventListener('click', ()=>{
+  calViewDate.setMonth(calViewDate.getMonth()+1);
+  renderCalendar();
+});
+
+function checkBannerLogic(){
+  const last = state.weeklyChecks.length ? state.weeklyChecks[state.weeklyChecks.length-1].date : null;
+  const ref = last || state.profileCreated || null;
+  const banner = document.getElementById('checkBanner');
+  if(!ref){ banner.style.display='none'; return; }
+  const days = Math.floor((new Date(todayKey()) - new Date(ref))/(1000*60*60*24));
+  if(days>=7){
+    banner.style.display='flex';
+    document.getElementById('daysSinceCheck').textContent = days;
+  } else {
+    banner.style.display='none';
+  }
+}
+
+// ---------- Gemini API ----------
+async function callGemini(userPrompt, extraSystem){
+  const key = state.profile.apiKey;
+  const model = state.profile.model || 'gemini-2.5-flash';
+  if(!key){ throw new Error('Imposta prima la tua API key Gemini.'); }
+
+  const systemInstruction = DEFAULT_SYSTEM_ROLE + '\n\n--- CONTESTO UTENTE ---\n' + buildContext() + (extraSystem?('\n\n'+extraSystem):'');
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+  const body = {
+    systemInstruction: { parts: [{ text: systemInstruction }] },
+    contents: [{ role:'user', parts:[{ text: userPrompt }] }]
+  };
+  const res = await fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  if(!res.ok){
+    const errText = await res.text();
+    throw new Error('Errore Gemini API ('+res.status+'): '+errText.slice(0,300));
+  }
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.map(p=>p.text).join('') || '';
+  return text;
+}
+
+function buildContext(){
+  const p = state.profile, t = state.targets, s = today().totals;
+  const remaining = {
+    kcal: t.kcal ? (t.kcal - s.kcal) : 'n/d',
+    protein: t.protein ? (t.protein - s.protein) : 'n/d',
+    carbs: t.carbs ? (t.carbs - s.carbs) : 'n/d',
+    fat: t.fat ? (t.fat - s.fat) : 'n/d',
+  };
+  // ultime giornate passate come contesto (max 5, escludendo oggi)
+  const pastDays = Object.keys(state.diary).filter(k=>k!==todayKey() && state.diary[k].entries.length>0).sort().slice(-5);
+  const pastSummary = pastDays.map(k=>{
+    const d = state.diary[k];
+    return `${k}: kcal ${Math.round(d.totals.kcal)}, P ${Math.round(d.totals.protein)}g, C ${Math.round(d.totals.carbs)}g, G ${Math.round(d.totals.fat)}g — pasti: ${d.entries.map(e=>e.text).join('; ')}`;
+  }).join('\n');
+
+  return `Profilo: età ${p.age}, sesso ${p.sex}, peso ${p.weight}kg, altezza ${p.height}cm, attività ${p.activity}, obiettivo: ${p.goal}.
+Storico schede/approcci passati: ${p.history || 'nessuno fornito'}.
+Target giornalieri: kcal ${t.kcal||'n/d'}, proteine ${t.protein||'n/d'}g, carboidrati ${t.carbs||'n/d'}g, grassi ${t.fat||'n/d'}g.
+Consumato finora oggi: kcal ${Math.round(s.kcal)}, proteine ${Math.round(s.protein)}g, carboidrati ${Math.round(s.carbs)}g, grassi ${Math.round(s.fat)}g.
+Rimanente stimato oggi: kcal ${remaining.kcal}, proteine ${remaining.protein}g, carboidrati ${remaining.carbs}g, grassi ${remaining.fat}g.
+Pasti già registrati oggi: ${today().entries.map(e=>e.text).join(' | ') || 'nessuno'}.
+Giornate precedenti recenti (per continuità e coerenza):
+${pastSummary || 'nessun dato precedente'}`;
+}
+
+function extractBlock(text, tag){
+  const re = new RegExp('<'+tag+'>([\\s\\S]*?)</'+tag+'>');
+  const m = text.match(re);
+  if(!m) return null;
+  try{ return JSON.parse(m[1].trim()); }catch(e){ return null; }
+}
+function stripBlock(text, tag){
+  const re = new RegExp('<'+tag+'>[\\s\\S]*?</'+tag+'>','g');
+  return text.replace(re,'').trim();
+}
+
+// ---------- actions ----------
+async function sendMeal(){
+  const input = document.getElementById('mealInput');
+  const text = input.value.trim();
+  if(!text) return;
+  if(!state.profile.apiKey){ alert('Imposta prima la tua API key Gemini nel pannello a sinistra.'); return; }
+
+  state.chatHistory.push({role:'user', text});
+  renderChat();
+  input.value='';
+  const btn = document.getElementById('btnSend');
+  btn.disabled = true;
+  addLoadingBubble();
+
+  const prompt = `L'utente ha appena registrato questo pasto/informazione: "${text}".
+Rispondi in due parti obbligatorie:
+1) Un blocco esatto così: <MACROS>{"kcal":numero,"protein":numero,"carbs":numero,"fat":numero}</MACROS> con la stima dei macro di QUESTO pasto (se il messaggio non è un pasto ma una domanda, usa {"kcal":0,"protein":0,"carbs":0,"fat":0}).
+2) Subito dopo, in linguaggio naturale, il tuo commento da coach: macro/kcal rimanenti nella giornata e proposte concrete per i prossimi pasti per rientrare nei target, mantenendo un'alimentazione bilanciata.`;
+
+  try{
+    const raw = await callGemini(prompt);
+    const macros = extractBlock(raw,'MACROS') || {kcal:0,protein:0,carbs:0,fat:0};
+    const clean = stripBlock(raw,'MACROS');
+
+    const day = today();
+    day.entries.push({time:new Date().toISOString(), text, ...macros});
+    day.totals.kcal += Number(macros.kcal)||0;
+    day.totals.protein += Number(macros.protein)||0;
+    day.totals.carbs += Number(macros.carbs)||0;
+    day.totals.fat += Number(macros.fat)||0;
+
+    removeLoadingBubble();
+    state.chatHistory.push({role:'ai', text: clean, macros});
+    renderChat();
+    renderGauges();
+    renderCalendar();
+    saveState();
+  }catch(err){
+    removeLoadingBubble();
+    state.chatHistory.push({role:'ai', text: '⚠️ '+err.message});
+    renderChat();
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function addLoadingBubble(){
+  const log = document.getElementById('chatLog');
+  const div = document.createElement('div');
+  div.className='msg ai'; div.id='loadingBubble';
+  div.innerHTML = '<div class="tag">Coach AI</div><div class="loading"><span></span><span></span><span></span></div>';
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+function removeLoadingBubble(){
+  const el = document.getElementById('loadingBubble');
+  if(el) el.remove();
+}
+
+async function suggestTargets(){
+  if(!state.profile.apiKey){ alert('Imposta prima la tua API key Gemini.'); return; }
+  const btn = document.getElementById('btnSuggestTargets');
+  btn.disabled = true; btn.textContent = 'Calcolo in corso...';
+  try{
+    const prompt = `In base al profilo fornito nel contesto, proponi target giornalieri per la fase di definizione (deficit calorico moderato, alta proteina per preservare massa magra). Rispondi SOLO con questo blocco, nient'altro:
+<TARGETS>{"kcal":numero,"protein":numero,"carbs":numero,"fat":numero}</TARGETS>
+Poi in 2-3 righe spiega brevemente la logica.`;
+    const raw = await callGemini(prompt);
+    const targets = extractBlock(raw,'TARGETS');
+    if(targets){
+      state.targets = targets;
+      document.getElementById('tKcal').value = targets.kcal;
+      document.getElementById('tProtein').value = targets.protein;
+      document.getElementById('tCarbs').value = targets.carbs;
+      document.getElementById('tFat').value = targets.fat;
+      renderGauges();
+      saveState();
+    }
+    const clean = stripBlock(raw,'TARGETS');
+    state.chatHistory.push({role:'ai', text: '🎯 Target proposti — '+clean});
+    renderChat();
+  }catch(err){
+    alert(err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "Chiedi all'AI di proporre i target";
+  }
+}
+
+async function logWeeklyCheck(){
+  const weight = document.getElementById('checkWeight').value;
+  const notes = document.getElementById('checkNotes').value;
+  if(!weight){ alert('Inserisci il peso attuale.'); return; }
+  const entry = {date: todayKey(), weight: Number(weight), notes};
+  state.weeklyChecks.push(entry);
+  document.getElementById('checkWeight').value='';
+  document.getElementById('checkNotes').value='';
+  renderWeeklyLog();
+  checkBannerLogic();
+  updateHints();
+  saveState();
+
+  if(state.profile.apiKey){
+    try{
+      const prompt = `L'utente ha appena registrato il check settimanale: peso ${weight}kg, note: "${notes}". Storico check precedenti: ${JSON.stringify(state.weeklyChecks)}. Valuta l'andamento (peso, energia, aderenza) e proponi se mantenere o modificare target/macro per la prossima settimana, in modo concreto.`;
+      const raw = await callGemini(prompt);
+      state.chatHistory.push({role:'ai', text:'📊 Check settimanale — '+raw});
+      renderChat();
+      saveState();
+    }catch(err){
+      console.error(err);
+    }
+  }
+}
+
+// ---------- suggerimenti pasto ----------
+async function suggestMeal(){
+  if(!state.profile.apiKey){ alert('Imposta prima la tua API key Gemini.'); return; }
+  const mealType = document.getElementById('suggMealType').value;
+  const btn = document.getElementById('btnSuggMeal');
+  const cardsEl = document.getElementById('suggCards');
+  btn.disabled = true; btn.textContent = 'Genero idee...';
+  cardsEl.innerHTML = '<div class="loading"><span></span><span></span><span></span></div>';
+
+  try{
+    const prompt = `Proponi 3 idee concrete e diverse tra loro per il pasto "${mealType}" di oggi, pensate per rientrare nei macro/kcal rimanenti della giornata indicati nel contesto (senza sforare, idealmente usando circa la quota di macro adatta a questo pasto). Alimentazione da bodybuilding/definizione: cibi reali, facili da preparare.
+Rispondi SOLO con questo blocco JSON, nient'altro prima o dopo:
+<SUGGESTIONS>[{"title":"nome piatto","description":"breve descrizione con quantità indicative","kcal":numero,"protein":numero,"carbs":numero,"fat":numero}, {"title":"...","description":"...","kcal":numero,"protein":numero,"carbs":numero,"fat":numero}, {"title":"...","description":"...","kcal":numero,"protein":numero,"carbs":numero,"fat":numero}]</SUGGESTIONS>`;
+    const raw = await callGemini(prompt);
+    const suggestions = extractBlock(raw,'SUGGESTIONS');
+    if(!suggestions || !Array.isArray(suggestions)){
+      cardsEl.innerHTML = '<div class="small">Non sono riuscito a generare idee valide, riprova.</div>';
+      return;
+    }
+    renderSuggestions(suggestions, mealType);
+  }catch(err){
+    cardsEl.innerHTML = `<div class="small">⚠️ ${escapeHtml(err.message)}</div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Proponi idee';
+  }
+}
+
+function renderSuggestions(suggestions, mealType){
+  const cardsEl = document.getElementById('suggCards');
+  cardsEl.innerHTML = suggestions.map((s,i)=>`
+    <div class="sugg-card">
+      <h3>${escapeHtml(s.title||'Idea pasto')}</h3>
+      <p>${escapeHtml(s.description||'')}</p>
+      <div class="macropill">
+        <span>kcal ${Math.round(s.kcal)||0}</span>
+        <span>P ${Math.round(s.protein)||0}g</span>
+        <span>C ${Math.round(s.carbs)||0}g</span>
+        <span>G ${Math.round(s.fat)||0}g</span>
+      </div>
+      <button class="ghost" data-idx="${i}">+ Aggiungi al diario di oggi</button>
+    </div>
+  `).join('');
+  cardsEl.querySelectorAll('button[data-idx]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const s = suggestions[Number(b.dataset.idx)];
+      const day = today();
+      const macros = {kcal:Number(s.kcal)||0, protein:Number(s.protein)||0, carbs:Number(s.carbs)||0, fat:Number(s.fat)||0};
+      const text = `${mealType}: ${s.title} — ${s.description}`;
+      day.entries.push({time:new Date().toISOString(), text, ...macros});
+      day.totals.kcal += macros.kcal;
+      day.totals.protein += macros.protein;
+      day.totals.carbs += macros.carbs;
+      day.totals.fat += macros.fat;
+      state.chatHistory.push({role:'ai', text:`✅ Aggiunto al diario: ${s.title}`, macros});
+      renderChat(); renderGauges(); renderCalendar(); saveState();
+      b.textContent = 'Aggiunto ✓'; b.disabled = true;
+    });
+  });
+}
+
+document.getElementById('btnSuggMeal').addEventListener('click', suggestMeal);
+
+// ---------- profile save/export/import ----------
+function saveProfileFromUI(){
+  state.profile.apiKey = document.getElementById('apiKey').value.trim();
+  state.profile.model = document.getElementById('model').value.trim() || 'gemini-2.5-flash';
+  state.profile.age = document.getElementById('age').value;
+  state.profile.sex = document.getElementById('sex').value;
+  state.profile.weight = document.getElementById('weight').value;
+  state.profile.height = document.getElementById('height').value;
+  state.profile.activity = document.getElementById('activity').value;
+  state.profile.goal = document.getElementById('goal').value;
+  state.profile.history = document.getElementById('history').value;
+  state.targets.kcal = Number(document.getElementById('tKcal').value)||'';
+  state.targets.protein = Number(document.getElementById('tProtein').value)||'';
+  state.targets.carbs = Number(document.getElementById('tCarbs').value)||'';
+  state.targets.fat = Number(document.getElementById('tFat').value)||'';
+  if(!state.profileCreated) state.profileCreated = todayKey();
+  updateStatusDot();
+  renderGauges();
+  checkBannerLogic();
+  saveState();
+}
+
+function exportProfile(){
+  saveProfileFromUI();
+  const exportable = JSON.parse(JSON.stringify(state));
+  exportable.profile.apiKey = ''; // non esportiamo la chiave per sicurezza
+  const blob = new Blob([JSON.stringify(exportable, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'profilo-nutrizionista-'+todayKey()+'.json';
+  a.click();
+}
+
+function importProfile(file){
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const parsed = JSON.parse(e.target.result);
+      const keptKey = state.profile.apiKey;
+      if(parsed.today && !parsed.diary){
+        parsed.diary = {};
+        parsed.diary[parsed.today.date] = {entries: parsed.today.entries, totals: parsed.today.totals};
+        delete parsed.today;
+      }
+      state = Object.assign(state, parsed);
+      if(!state.diary) state.diary = {};
+      state.profile.apiKey = state.profile.apiKey || keptKey;
+      calSelectedDate = todayKey();
+      applyStateToUI();
+      saveState();
+      alert('Profilo importato correttamente.');
+    }catch(err){
+      alert('File non valido: '+err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function resetDay(){
+  if(!confirm('Azzerare il diario di oggi?')) return;
+  state.diary[todayKey()] = emptyDay();
+  state.chatHistory = [];
+  renderChat(); renderGauges(); renderCalendar(); saveState();
+}
+
+// ---------- events ----------
+document.getElementById('btnSend').addEventListener('click', sendMeal);
+document.getElementById('mealInput').addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMeal(); }
+});
+document.getElementById('btnSaveProfile').addEventListener('click', saveProfileFromUI);
+document.getElementById('btnSuggestTargets').addEventListener('click', suggestTargets);
+document.getElementById('btnCheck').addEventListener('click', logWeeklyCheck);
+document.getElementById('btnExport').addEventListener('click', exportProfile);
+document.getElementById('btnImportTrigger').addEventListener('click', ()=>document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', (e)=>{
+  if(e.target.files[0]) importProfile(e.target.files[0]);
+});
+document.getElementById('btnResetDay').addEventListener('click', resetDay);
+document.getElementById('btnScrollCheck').addEventListener('click', ()=>{
+  document.getElementById('checkWeight').scrollIntoView({behavior:'smooth', block:'center'});
+});
+['apiKey','model'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', saveProfileFromUI);
+});
+
+loadState();
+
+// ---------- PWA: installazione + service worker ----------
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>console.warn('SW non registrato:', err));
+  });
+}
+
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  document.getElementById('btnInstall').style.display = 'inline-flex';
+});
+document.getElementById('btnInstall').addEventListener('click', async ()=>{
+  if(!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  document.getElementById('btnInstall').style.display = 'none';
+});
+window.addEventListener('appinstalled', ()=>{
+  document.getElementById('btnInstall').style.display = 'none';
+});
+</script>
+</body>
+</html>
