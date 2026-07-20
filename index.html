@@ -3,37 +3,45 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>COMPOSIZIONE — Nutrizionista Sportivo AI</title>
+<title>NutrizionistaAI — Coach Nutrizionale Sportivo</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#F7FAEE">
+<meta name="theme-color" content="#F4F7F6">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Composizione">
+<meta name="apple-mobile-web-app-title" content="NutrizionistaAI">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400..700&family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#F7FAEE;
-    --surface:#F1F4E7;
-    --surface-2:#E4E9D6;
-    --border:#C6CBB8;
-    --text:#1A1C16;
-    --muted:#494B3E;
-    --protein:#3F6836;
-    --carbs:#8B5000;
-    --fat:#6750A4;
-    --kcal:#2B2F24;
+    /* 60% — dominante: sfondo neutro e pulito */
+    --bg:#F4F7F6;
+    --surface:#FFFFFF;
+    --surface-2:#EAF0EF;
+    --border:#D4DEDC;
+
+    /* 30% — struttura: tipografia e card */
+    --text:#1A2530;
+    --muted:#5B6B70;
+    --protein:#2E8B90;
+    --carbs:#C97B4A;
+    --fat:#3E5C74;
+    --kcal:#1A2530;
     --danger:#BA1A1A;
+
+    /* 10% — accento: solo per le azioni e i traguardi raggiunti */
+    --accent:#E8A598;
+    --on-accent:#1A2530;
+
     --on-protein:#FFFFFF;
-    --protein-container:#BFF2A4;
-    --on-protein-container:#062100;
-    --fat-container:#E9DDFF;
-    --on-fat-container:#21005D;
-    --carbs-container:#FFDDB3;
-    --on-carbs-container:#2C1600;
+    --protein-container:#DCEEEE;
+    --on-protein-container:#0F3D3F;
+    --fat-container:#E1E8ED;
+    --on-fat-container:#24313B;
+    --carbs-container:#F7E3D4;
+    --on-carbs-container:#5A3418;
     --radius:20px;
   }
   *{box-sizing:border-box;}
@@ -43,8 +51,8 @@
   .mono{font-family:'Roboto Mono',monospace;}
   button{font-family:'Roboto',sans-serif;cursor:pointer;border:none;border-radius:999px;padding:11px 22px;font-weight:500;font-size:14px;transition:transform .12s cubic-bezier(.2,0,0,1), box-shadow .15s ease, background .15s ease;}
   button:active{transform:scale(.96);}
-  button.primary{background:var(--protein);color:var(--on-protein);box-shadow:0 1px 3px rgba(0,0,0,.15);}
-  button.primary:hover{box-shadow:0 2px 6px rgba(0,0,0,.2);}
+  button.primary{background:var(--accent);color:var(--on-accent);box-shadow:0 1px 3px rgba(0,0,0,.12);}
+  button.primary:hover{box-shadow:0 2px 6px rgba(0,0,0,.16);}
   button.ghost{background:var(--surface-2);border:none;color:var(--text);}
   button.ghost:hover{background:var(--border);}
   button:disabled{opacity:.4;cursor:not-allowed;}
@@ -55,7 +63,7 @@
   .row{display:flex;gap:12px;}
   .row > *{flex:1;}
 
-  header{border-bottom:1px solid var(--border);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;position:sticky;top:0;background:rgba(247,250,238,.92);backdrop-filter:blur(6px);z-index:10;}
+  header{border-bottom:1px solid var(--border);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;position:sticky;top:0;background:rgba(244,247,246,.92);backdrop-filter:blur(6px);z-index:10;}
   header .eyebrow{color:var(--muted);font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-family:'Roboto Mono',monospace;}
   header h1{font-size:20px;letter-spacing:-.01em;}
   header .actions{display:flex;gap:10px;flex-wrap:wrap;}
@@ -105,6 +113,9 @@
   .gauge.carbs .bar>div{background:var(--carbs);}
   .gauge.fat .bar>div{background:var(--fat);}
   .gauge.over .nums{color:var(--danger);}
+  .gauge.completed{border-color:var(--accent);}
+  .gauge.completed .nums{color:var(--on-accent);}
+  .gauge.completed .bar>div{background:var(--accent) !important;}
 
   .banner{background:var(--carbs-container);border:1px solid transparent;border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;color:var(--on-carbs-container);}
   .banner strong{color:var(--carbs);}
@@ -178,7 +189,7 @@
 <header>
   <div>
     <div class="eyebrow">Ricomposizione corporea · Definizione</div>
-    <h1>COMPOSIZIONE <span class="mono" style="color:var(--muted);font-weight:400;">// coach AI</span></h1>
+    <h1>NutrizionistaAI</h1>
   </div>
   <div class="actions">
     <button class="primary" id="btnInstall" style="display:none;">📲 Installa app</button>
@@ -436,7 +447,10 @@ function renderGauges(){
     document.getElementById(tId).textContent = t[key] ? t[key] : '-';
     const pct = t[key] ? Math.min(100,(s[key]/t[key])*100) : 0;
     document.getElementById(bId).style.width = pct+'%';
-    const over = t[key] && s[key] > t[key];
+    const ratio = t[key] ? s[key]/t[key] : 0;
+    const completed = t[key] && ratio >= 1 && ratio <= 1.08; // target raggiunto: evidenzia in accento
+    const over = t[key] && ratio > 1.08; // sforato oltre l'8%: avviso
+    document.getElementById(gId).classList.toggle('completed', !!completed);
     document.getElementById(gId).classList.toggle('over', !!over);
   });
 }
@@ -782,7 +796,7 @@ function renderSuggestions(suggestions, mealType){
         <span>C ${Math.round(s.carbs)||0}g</span>
         <span>G ${Math.round(s.fat)||0}g</span>
       </div>
-      <button class="ghost" data-idx="${i}">+ Aggiungi al diario di oggi</button>
+      <button class="primary" data-idx="${i}">+ Aggiungi al diario di oggi</button>
     </div>
   `).join('');
   cardsEl.querySelectorAll('button[data-idx]').forEach(b=>{

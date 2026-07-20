@@ -1,13 +1,13 @@
 {
-  "name": "Composizione — Coach Nutrizionale AI",
-  "short_name": "Composizione",
+  "name": "NutrizionistaAI — Coach Nutrizionale Sportivo",
+  "short_name": "NutrizionistaAI",
   "description": "Coach nutrizionale AI per ricomposizione corporea: diario alimentare, target macro, calendario e suggerimenti pasto generati da Gemini.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#F7FAEE",
-  "theme_color": "#F7FAEE",
+  "background_color": "#F4F7F6",
+  "theme_color": "#F4F7F6",
   "lang": "it",
   "icons": [
     {

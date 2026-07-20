@@ -1,4 +1,4 @@
-const CACHE_NAME = 'composizione-v2';
+const CACHE_NAME = 'nutrizionistaai-v1';
 const STATIC_ASSETS = [
   './manifest.json',
   './icons/icon-192.png',
