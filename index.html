@@ -136,6 +136,17 @@
   details summary{cursor:pointer;color:var(--muted);font-size:13px;margin-bottom:10px;}
   .small{font-size:12px;color:var(--muted);}
   .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
+
+  /* guida "come ottenere la chiave API" */
+  .key-guide{background:var(--protein-container);border-radius:14px;padding:2px 14px;margin-bottom:16px;}
+  .key-guide summary{list-style:none;cursor:pointer;padding:12px 0;font-size:13px;font-weight:600;color:var(--on-protein-container);display:flex;align-items:center;justify-content:space-between;}
+  .key-guide summary::-webkit-details-marker{display:none;}
+  .key-guide summary::after{content:'';width:7px;height:7px;border-right:2px solid var(--on-protein-container);border-bottom:2px solid var(--on-protein-container);transform:rotate(45deg);transition:transform .2s ease;margin-left:10px;flex-shrink:0;opacity:.6;}
+  .key-guide[open] summary::after{transform:rotate(-135deg);}
+  .stepper{list-style:none;padding:0;margin:2px 0 14px;display:flex;flex-direction:column;gap:12px;}
+  .stepper li{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:var(--on-protein-container);}
+  .stepper li strong{font-size:13px;}
+  .step-num{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--protein);color:var(--on-protein);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;font-family:'Roboto Mono',monospace;margin-top:1px;}
   .status-dot.on{background:var(--protein);}
   .status-dot.off{background:var(--danger);}
 
@@ -220,10 +231,21 @@
         <label>Chiave API Gemini</label>
         <input type="password" id="apiKey" placeholder="incolla qui la tua API key">
       </div>
+
+      <details class="key-guide" id="keyGuideDetails">
+        <summary>Non hai una chiave? Te la faccio ottenere in 30 secondi ↓</summary>
+        <ol class="stepper">
+          <li><span class="step-num">1</span><div><strong>Apri Google AI Studio</strong><br>Con lo stesso account Google che usi di solito. È gratis, non serve carta di credito.</div></li>
+          <li><span class="step-num">2</span><div><strong>Clicca "Create API key"</strong><br>Il pulsante blu in alto a destra nella pagina.</div></li>
+          <li><span class="step-num">3</span><div><strong>Copia il codice</strong><br>Inizia con "AIza...". Fai tap per copiarlo.</div></li>
+          <li><span class="step-num">4</span><div><strong>Incollalo nel campo qui sopra</strong><br>Resta solo nel tuo telefono, non lo vede nessun altro.</div></li>
+        </ol>
+        <button class="primary" id="btnOpenAIStudio" type="button" style="width:100%;">Apri Google AI Studio ↗</button>
+      </details>
+
       <div class="field">
         <label>Modello</label>
-        <input type="text" id="model" value="gemini-2.5-flash">
-        <div class="small" style="margin-top:5px;">Ottieni una chiave gratuita su aistudio.google.com. La chiave resta solo nel tuo browser (localStorage), non viene mai inviata altrove.</div>
+        <input type="text" id="model" value="gemini-3.5-flash">
       </div>
       <div><span class="status-dot off" id="statusDot"></span><span class="small" id="statusText">Chiave non impostata</span></div>
       </div>
@@ -391,7 +413,7 @@ function nextMealLabel(day, categoryKey){
 }
 
 let state = {
-  profile:{age:'',sex:'uomo',weight:'',height:'',activity:'moderato',goal:'',history:'', apiKey:'', model:'gemini-2.5-flash'},
+  profile:{age:'',sex:'uomo',weight:'',height:'',activity:'moderato',goal:'',history:'', apiKey:'', model:'gemini-3.5-flash'},
   targets:{kcal:'',protein:'',carbs:'',fat:''},
   diary:{}, // dateKey -> {entries:[], totals:{kcal,protein,carbs,fat}}
   weeklyChecks:[],
@@ -432,7 +454,7 @@ function saveState(){
 
 function applyStateToUI(){
   document.getElementById('apiKey').value = state.profile.apiKey || '';
-  document.getElementById('model').value = state.profile.model || 'gemini-2.5-flash';
+  document.getElementById('model').value = state.profile.model || 'gemini-3.5-flash';
   document.getElementById('age').value = state.profile.age || '';
   document.getElementById('sex').value = state.profile.sex || 'uomo';
   document.getElementById('weight').value = state.profile.weight || '';
@@ -463,7 +485,7 @@ function updateStatusDot(){
 
 function updateHints(){
   const p = state.profile, t = state.targets;
-  document.getElementById('hintGemini').textContent = p.apiKey ? `● ${p.model||'gemini-2.5-flash'}` : 'non connesso';
+  document.getElementById('hintGemini').textContent = p.apiKey ? `● ${p.model||'gemini-3.5-flash'}` : 'non connesso';
   document.getElementById('hintProfilo').textContent = (p.age && p.weight) ? `${p.age} anni · ${p.weight}kg · ${p.height||'?'}cm` : 'da compilare';
   document.getElementById('hintTarget').textContent = t.kcal ? `${t.kcal} kcal · P${t.protein||0}/C${t.carbs||0}/G${t.fat||0}` : 'da impostare';
   const lastCheck = state.weeklyChecks.length ? state.weeklyChecks[state.weeklyChecks.length-1] : null;
@@ -620,7 +642,7 @@ function checkBannerLogic(){
 // ---------- Gemini API ----------
 async function callGemini(userPrompt, extraSystem){
   const key = state.profile.apiKey;
-  const model = state.profile.model || 'gemini-2.5-flash';
+  const model = state.profile.model || 'gemini-3.5-flash';
   if(!key){ throw new Error('Imposta prima la tua API key Gemini.'); }
 
   const systemInstruction = DEFAULT_SYSTEM_ROLE + '\n\n--- CONTESTO UTENTE ---\n' + buildContext() + (extraSystem?('\n\n'+extraSystem):'');
@@ -863,7 +885,7 @@ document.getElementById('btnSuggMeal').addEventListener('click', suggestMeal);
 // ---------- profile save/export/import ----------
 function saveProfileFromUI(){
   state.profile.apiKey = document.getElementById('apiKey').value.trim();
-  state.profile.model = document.getElementById('model').value.trim() || 'gemini-2.5-flash';
+  state.profile.model = document.getElementById('model').value.trim() || 'gemini-3.5-flash';
   state.profile.age = document.getElementById('age').value;
   state.profile.sex = document.getElementById('sex').value;
   state.profile.weight = document.getElementById('weight').value;
@@ -876,6 +898,8 @@ function saveProfileFromUI(){
   state.targets.carbs = Number(document.getElementById('tCarbs').value)||'';
   state.targets.fat = Number(document.getElementById('tFat').value)||'';
   if(!state.profileCreated) state.profileCreated = todayKey();
+  const keyGuideEl = document.getElementById('keyGuideDetails');
+  if(keyGuideEl) keyGuideEl.open = !state.profile.apiKey;
   updateStatusDot();
   renderGauges();
   checkBannerLogic();
@@ -999,7 +1023,15 @@ document.getElementById('btnScrollCheck').addEventListener('click', ()=>{
   document.getElementById(id).addEventListener('change', saveProfileFromUI);
 });
 
+document.getElementById('btnOpenAIStudio').addEventListener('click', ()=>{
+  window.open('https://aistudio.google.com/apikey', '_blank', 'noopener');
+});
+
 loadState();
+
+// apre la guida "come ottenere la chiave" automaticamente solo se non ne hai già impostata una
+const keyGuide = document.getElementById('keyGuideDetails');
+if(!state.profile.apiKey){ keyGuide.open = true; }
 
 // ---------- PWA: installazione + service worker ----------
 if('serviceWorker' in navigator){
