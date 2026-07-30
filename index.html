@@ -166,6 +166,16 @@
   #dayDetail .dd-entry .dd-macropill{font-family:'Roboto Mono',monospace;font-size:10.5px;color:var(--muted);margin-top:3px;}
 
   /* meal suggestions */
+  /* pasti registrati oggi */
+  .meals-list{display:flex;flex-direction:column;gap:10px;max-height:340px;overflow-y:auto;}
+  .meal-row{display:flex;align-items:flex-start;gap:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:14px;padding:12px 14px;}
+  .meal-row-main{flex:1;min-width:0;}
+  .meal-row-label{font-family:'Roboto Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--protein);font-weight:700;}
+  .meal-row-time{color:var(--muted);font-weight:400;margin-left:6px;}
+  .meal-row-text{font-size:13.5px;margin:4px 0 8px;word-break:break-word;}
+  .meal-row-remove{flex-shrink:0;width:30px;height:30px;border-radius:50%;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-size:14px;padding:0;display:flex;align-items:center;justify-content:center;}
+  .meal-row-remove:hover{background:var(--danger);border-color:var(--danger);color:#FFFFFF;}
+
   .sugg-controls{display:flex;gap:10px;margin-bottom:14px;}
   .sugg-controls select{flex:1;}
   .sugg-cards{display:flex;flex-direction:column;gap:12px;}
@@ -311,6 +321,13 @@
       <div class="gauge fat" id="gFat"><div class="label">Grassi</div><div class="nums"><span id="vFat">0</span>g <small>/ <span id="tFatShow">-</span>g</small></div><div class="bar"><div id="bFat" style="width:0%"></div></div></div>
     </div>
 
+    <details class="panel" open id="panelMeals">
+      <summary><h2>Pasti registrati oggi</h2><span class="summary-hint" id="hintMeals">0 pasti</span></summary>
+      <div class="panel-body">
+        <div id="mealsList"><div class="small">Nessun pasto registrato ancora oggi.</div></div>
+      </div>
+    </details>
+
     <div class="panel">
       <h2>Suggerimenti pasto</h2>
       <div class="sugg-controls">
@@ -331,6 +348,16 @@
       <h2>Diario alimentare — oggi</h2>
       <div class="chat" id="chatLog">
         <div class="msg ai"><div class="tag">Coach AI</div>Ciao! Sono il tuo nutrizionista sportivo AI. Compila il profilo a sinistra, imposta i target (o chiedimi di proporteli), poi scrivimi qui cosa mangi durante la giornata: calcolerò i macro rimanenti e ti proporrò i pasti successivi per restare in target.</div>
+      </div>
+      <div class="field" style="margin-bottom:10px;">
+        <label>Categoria pasto</label>
+        <select id="mealCategory">
+          <option value="colazione">Colazione</option>
+          <option value="spuntino">Spuntino</option>
+          <option value="pranzo" selected>Pranzo</option>
+          <option value="cena">Cena</option>
+          <option value="altro">Altro</option>
+        </select>
       </div>
       <div class="composer">
         <textarea id="mealInput" placeholder="Es: ho mangiato 150g di petto di pollo, 80g di riso e verdure miste..."></textarea>
@@ -353,6 +380,15 @@ Regole di collaborazione:
 4. MONITORAGGIO ATTIVO: sii proattivo nel ricordare check periodici su peso e andamento generale.
 
 Sii diretto, concreto, pratico. Dai numeri precisi. Tono da coach competente, non generico.`;
+
+const MEAL_CATEGORIES = {
+  colazione:'Colazione', spuntino:'Spuntino', pranzo:'Pranzo', cena:'Cena', altro:'Altro'
+};
+function nextMealLabel(day, categoryKey){
+  const base = MEAL_CATEGORIES[categoryKey] || 'Pasto';
+  const count = day.entries.filter(e=>e.category===categoryKey).length;
+  return count===0 ? base : `${base} ${count+1}`;
+}
 
 let state = {
   profile:{age:'',sex:'uomo',weight:'',height:'',activity:'moderato',goal:'',history:'', apiKey:'', model:'gemini-2.5-flash'},
@@ -414,6 +450,7 @@ function applyStateToUI(){
   renderWeeklyLog();
   checkBannerLogic();
   renderCalendar();
+  renderMealsList();
 }
 
 function updateStatusDot(){
@@ -627,7 +664,7 @@ Storico schede/approcci passati: ${p.history || 'nessuno fornito'}.
 Target giornalieri: kcal ${t.kcal||'n/d'}, proteine ${t.protein||'n/d'}g, carboidrati ${t.carbs||'n/d'}g, grassi ${t.fat||'n/d'}g.
 Consumato finora oggi: kcal ${Math.round(s.kcal)}, proteine ${Math.round(s.protein)}g, carboidrati ${Math.round(s.carbs)}g, grassi ${Math.round(s.fat)}g.
 Rimanente stimato oggi: kcal ${remaining.kcal}, proteine ${remaining.protein}g, carboidrati ${remaining.carbs}g, grassi ${remaining.fat}g.
-Pasti già registrati oggi: ${today().entries.map(e=>e.text).join(' | ') || 'nessuno'}.
+Pasti già registrati oggi: ${today().entries.map(e=>`${e.categoryLabel?'['+e.categoryLabel+'] ':''}${e.text}`).join(' | ') || 'nessuno'}.
 Giornate precedenti recenti (per continuità e coerenza):
 ${pastSummary || 'nessun dato precedente'}`;
 }
@@ -668,7 +705,9 @@ Rispondi in due parti obbligatorie:
     const clean = stripBlock(raw,'MACROS');
 
     const day = today();
-    day.entries.push({time:new Date().toISOString(), text, ...macros});
+    const category = document.getElementById('mealCategory').value;
+    const categoryLabel = nextMealLabel(day, category);
+    day.entries.push({time:new Date().toISOString(), text, category, categoryLabel, ...macros});
     day.totals.kcal += Number(macros.kcal)||0;
     day.totals.protein += Number(macros.protein)||0;
     day.totals.carbs += Number(macros.carbs)||0;
@@ -679,6 +718,7 @@ Rispondi in due parti obbligatorie:
     renderChat();
     renderGauges();
     renderCalendar();
+    renderMealsList();
     saveState();
   }catch(err){
     removeLoadingBubble();
@@ -804,14 +844,15 @@ function renderSuggestions(suggestions, mealType){
       const s = suggestions[Number(b.dataset.idx)];
       const day = today();
       const macros = {kcal:Number(s.kcal)||0, protein:Number(s.protein)||0, carbs:Number(s.carbs)||0, fat:Number(s.fat)||0};
-      const text = `${mealType}: ${s.title} — ${s.description}`;
-      day.entries.push({time:new Date().toISOString(), text, ...macros});
+      const text = `${s.title} — ${s.description}`;
+      const categoryLabel = nextMealLabel(day, mealType);
+      day.entries.push({time:new Date().toISOString(), text, category:mealType, categoryLabel, ...macros});
       day.totals.kcal += macros.kcal;
       day.totals.protein += macros.protein;
       day.totals.carbs += macros.carbs;
       day.totals.fat += macros.fat;
       state.chatHistory.push({role:'ai', text:`✅ Aggiunto al diario: ${s.title}`, macros});
-      renderChat(); renderGauges(); renderCalendar(); saveState();
+      renderChat(); renderGauges(); renderCalendar(); renderMealsList(); saveState();
       b.textContent = 'Aggiunto ✓'; b.disabled = true;
     });
   });
@@ -877,11 +918,64 @@ function importProfile(file){
   reader.readAsText(file);
 }
 
+// ---------- pasti registrati oggi (lista + rimozione) ----------
+function renderMealsList(){
+  const day = today();
+  const listEl = document.getElementById('mealsList');
+  const hintEl = document.getElementById('hintMeals');
+  hintEl.textContent = day.entries.length + (day.entries.length===1 ? ' pasto' : ' pasti');
+
+  if(day.entries.length===0){
+    listEl.innerHTML = '<div class="small">Nessun pasto registrato ancora oggi.</div>';
+    return;
+  }
+  listEl.innerHTML = day.entries.map((e,i)=>{
+    const time = e.time ? new Date(e.time).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}) : '';
+    const label = e.categoryLabel || 'Pasto';
+    return `
+      <div class="meal-row">
+        <div class="meal-row-main">
+          <div class="meal-row-label">${escapeHtml(label)}<span class="meal-row-time">${time}</span></div>
+          <div class="meal-row-text">${escapeHtml(e.text)}</div>
+          <div class="macropill">
+            <span>kcal ${Math.round(e.kcal)||0}</span>
+            <span>P ${Math.round(e.protein)||0}g</span>
+            <span>C ${Math.round(e.carbs)||0}g</span>
+            <span>G ${Math.round(e.fat)||0}g</span>
+          </div>
+        </div>
+        <button class="meal-row-remove" data-remove="${i}" title="Rimuovi pasto">✕</button>
+      </div>
+    `;
+  }).join('');
+
+  listEl.querySelectorAll('button[data-remove]').forEach(b=>{
+    b.addEventListener('click', ()=> removeMealEntry(Number(b.dataset.remove)));
+  });
+}
+
+function removeMealEntry(index){
+  const day = today();
+  if(!day.entries[index]) return;
+  day.entries.splice(index, 1);
+  day.totals = day.entries.reduce((acc,e)=>{
+    acc.kcal += Number(e.kcal)||0;
+    acc.protein += Number(e.protein)||0;
+    acc.carbs += Number(e.carbs)||0;
+    acc.fat += Number(e.fat)||0;
+    return acc;
+  }, {kcal:0,protein:0,carbs:0,fat:0});
+  renderMealsList();
+  renderGauges();
+  renderCalendar();
+  saveState();
+}
+
 function resetDay(){
   if(!confirm('Azzerare il diario di oggi?')) return;
   state.diary[todayKey()] = emptyDay();
   state.chatHistory = [];
-  renderChat(); renderGauges(); renderCalendar(); saveState();
+  renderChat(); renderGauges(); renderCalendar(); renderMealsList(); saveState();
 }
 
 // ---------- events ----------
