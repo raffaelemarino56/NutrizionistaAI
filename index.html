@@ -13,6 +13,7 @@
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400..700&family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -227,14 +228,48 @@
   .loading span:nth-child(2){animation-delay:.15s;}
   .loading span:nth-child(3){animation-delay:.3s;}
   @keyframes pulse{0%,80%,100%{opacity:.2;transform:scale(.7);}40%{opacity:1;transform:scale(1);}}
+
+  /* ---- indicatore stato rete ---- */
+  .net-indicator{display:inline-flex;align-items:center;gap:6px;font-family:'Roboto Mono',monospace;font-size:11px;padding:6px 11px;border-radius:999px;border:1px solid var(--border);background:var(--surface-2);color:var(--muted);white-space:nowrap;}
+  .net-indicator .net-dot{width:8px;height:8px;border-radius:50%;background:var(--protein);flex-shrink:0;}
+  .net-indicator.offline{background:var(--carbs-container);color:var(--on-carbs-container);border-color:transparent;}
+  .net-indicator.offline .net-dot{background:var(--danger);}
+
+  /* banner "pasti in sospeso da stimare" */
+  .pending-banner{grid-column:1/-1;background:var(--carbs-container);color:var(--on-carbs-container);border-radius:var(--radius);padding:13px 18px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13.5px;font-weight:500;flex-wrap:wrap;}
+  .pending-banner button{background:var(--on-carbs-container);color:var(--carbs-container);}
+
+  /* badge pasto in attesa di stima AI */
+  .meal-row.pending{border-style:dashed;}
+  .pending-tag{display:inline-block;background:var(--carbs-container);color:var(--on-carbs-container);border-radius:6px;padding:1px 7px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-left:6px;font-family:'Roboto Mono',monospace;}
+  .meal-row-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
+  .meal-row-btn{width:30px;height:30px;border-radius:50%;background:var(--surface);border:1px solid var(--border);color:var(--muted);font-size:13px;padding:0;display:flex;align-items:center;justify-content:center;}
+  .meal-row-btn.edit:hover{background:var(--protein);border-color:var(--protein);color:#FFFFFF;}
+  .meal-row-btn.remove:hover{background:var(--danger);border-color:var(--danger);color:#FFFFFF;}
+
+  /* composer: riga di azioni secondarie */
+  .composer-actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center;}
+  .composer-hint{font-size:12px;color:var(--muted);flex:1;min-width:140px;}
+
+  /* editor pasto (add/modifica manuale) — riusa overlay/card dell'onboarding */
+  .macro-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+  .editor-error{color:var(--danger);font-size:12px;min-height:15px;margin:2px 0 8px;}
+  .modal-close{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;background:var(--surface-2);border:1px solid var(--border);color:var(--muted);font-size:14px;padding:0;display:flex;align-items:center;justify-content:center;}
+  .modal-close:hover{background:var(--border);color:var(--text);}
+  .onboarding-card{position:relative;}
+
+  /* rispetto delle preferenze di movimento ridotto */
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;}
+  }
 </style>
 </head>
 <body>
 
-<div class="onboarding-overlay hidden" id="onboardingOverlay">
+<div class="onboarding-overlay hidden" id="onboardingOverlay" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
   <div class="onboarding-card">
     <div class="eyebrow">Prima di iniziare</div>
-    <h1 style="font-size:19px;margin:6px 0 4px;">Serve la tua chiave Gemini</h1>
+    <h1 id="onboardingTitle" style="font-size:19px;margin:6px 0 4px;">Serve la tua chiave Gemini</h1>
     <p class="small" style="margin-bottom:18px;">L'app usa Gemini per generare i consigli nutrizionali. La chiave resta solo nel tuo telefono/browser, non viene mai inviata altrove.</p>
 
     <div class="field">
@@ -258,7 +293,7 @@
   </div>
 </div>
 
-<div class="onboarding-overlay hidden" id="tourOverlay">
+<div class="onboarding-overlay hidden" id="tourOverlay" role="dialog" aria-modal="true" aria-label="Tour introduttivo dell'app">
   <div class="onboarding-card">
 
     <div class="tour-dots">
@@ -306,17 +341,57 @@
   </div>
 </div>
 
+<!-- Editor pasto: inserimento manuale dei macro e modifica di un pasto gia registrato.
+     Funziona completamente offline (nessuna chiamata AI). -->
+<div class="onboarding-overlay hidden" id="mealEditorOverlay" role="dialog" aria-modal="true" aria-labelledby="mealEditorTitle">
+  <div class="onboarding-card">
+    <button class="modal-close" id="btnMealEditorClose" type="button" aria-label="Chiudi">✕</button>
+    <div class="eyebrow" id="mealEditorEyebrow">Inserimento manuale</div>
+    <h1 id="mealEditorTitle" style="font-size:19px;margin:6px 0 14px;">Aggiungi un pasto</h1>
+
+    <div class="field" role="group" aria-label="Categoria pasto">
+      <label id="editorCategoryLabel">Categoria</label>
+      <div class="pill-group" id="editorCategoryGroup" data-value="pranzo" role="radiogroup" aria-labelledby="editorCategoryLabel">
+        <button type="button" class="pill" data-val="colazione">🌅 Colazione</button>
+        <button type="button" class="pill" data-val="spuntino">🍎 Spuntino</button>
+        <button type="button" class="pill active" data-val="pranzo">🍝 Pranzo</button>
+        <button type="button" class="pill" data-val="cena">🌙 Cena</button>
+        <button type="button" class="pill" data-val="altro">➕ Altro</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="editorText">Cosa hai mangiato</label>
+      <textarea id="editorText" rows="2" placeholder="Es: 150g petto di pollo, 80g riso, verdure"></textarea>
+    </div>
+
+    <div class="macro-grid">
+      <div class="field"><label for="editorKcal">Kcal</label><input type="number" id="editorKcal" min="0" inputmode="numeric" placeholder="0"></div>
+      <div class="field"><label for="editorProtein">Proteine (g)</label><input type="number" id="editorProtein" min="0" inputmode="numeric" placeholder="0"></div>
+      <div class="field"><label for="editorCarbs">Carboidrati (g)</label><input type="number" id="editorCarbs" min="0" inputmode="numeric" placeholder="0"></div>
+      <div class="field"><label for="editorFat">Grassi (g)</label><input type="number" id="editorFat" min="0" inputmode="numeric" placeholder="0"></div>
+    </div>
+    <div class="editor-error" id="editorError"></div>
+
+    <div class="row">
+      <button class="ghost" id="btnMealEditorCancel" type="button">Annulla</button>
+      <button class="primary" id="btnMealEditorSave" type="button" style="flex:1;">Salva pasto</button>
+    </div>
+  </div>
+</div>
+
 <header>
   <div>
     <div class="eyebrow">Ricomposizione corporea · Definizione</div>
     <h1>NutrizionistaAI</h1>
   </div>
   <div class="actions">
-    <button class="ghost" id="btnShowTour" title="Come funziona l'app">ℹ️ Guida</button>
+    <span class="net-indicator" id="netIndicator" role="status" aria-live="polite" title="Stato della connessione"><span class="net-dot"></span><span id="netLabel">Online</span></span>
+    <button class="ghost" id="btnShowTour" title="Come funziona l'app" aria-label="Guida: come funziona l'app">ℹ️ Guida</button>
     <button class="primary" id="btnInstall" style="display:none;">📲 Installa app</button>
     <button class="ghost" id="btnExport">Esporta profilo JSON</button>
     <button class="ghost" id="btnImportTrigger">Importa profilo</button>
-    <input type="file" id="fileInput" accept="application/json">
+    <input type="file" id="fileInput" accept="application/json" aria-label="Seleziona file profilo JSON da importare">
   </div>
 </header>
 
@@ -324,7 +399,12 @@
 
   <div class="next-step-banner" id="nextStepBanner" style="display:none;">
     <span id="nextStepText"></span>
-    <button class="next-step-dismiss" id="btnDismissNextStep" title="Nascondi per ora">✕</button>
+    <button class="next-step-dismiss" id="btnDismissNextStep" title="Nascondi per ora" aria-label="Nascondi suggerimento">✕</button>
+  </div>
+
+  <div class="pending-banner" id="pendingBanner" style="display:none;">
+    <span id="pendingText"></span>
+    <button class="primary" id="btnEstimatePending" type="button">Stima ora con l'AI</button>
   </div>
 
 
@@ -334,8 +414,8 @@
       <summary><h2>🔌 Connessione Gemini</h2><span class="summary-hint" id="hintGemini"></span></summary>
       <div class="panel-body">
       <div class="field">
-        <label>Chiave API Gemini</label>
-        <input type="password" id="apiKey" placeholder="incolla qui la tua API key">
+        <label for="apiKey">Chiave API Gemini</label>
+        <input type="password" id="apiKey" placeholder="incolla qui la tua API key" autocomplete="off">
       </div>
 
       <details class="key-guide" id="keyGuideDetails">
@@ -350,8 +430,15 @@
       </details>
 
       <div class="field">
-        <label>Modello</label>
-        <input type="text" id="model" value="gemini-3.5-flash">
+        <label for="model">Modello</label>
+        <input type="text" id="model" value="gemini-3.5-flash" list="modelOptions" autocomplete="off" spellcheck="false">
+        <datalist id="modelOptions">
+          <option value="gemini-3.5-flash"></option>
+          <option value="gemini-3.5-flash-lite"></option>
+          <option value="gemini-2.5-flash"></option>
+          <option value="gemini-2.5-flash-lite"></option>
+          <option value="gemini-2.5-pro"></option>
+        </datalist>
       </div>
       <div><span class="status-dot off" id="statusDot"></span><span class="small" id="statusText">Chiave non impostata</span></div>
       </div>
@@ -361,17 +448,17 @@
       <summary><h2>👤 Il tuo profilo</h2><span class="summary-hint" id="hintProfilo"></span></summary>
       <div class="panel-body">
       <div class="row">
-        <div class="field"><label>Età</label><input type="number" id="age"></div>
-        <div class="field"><label>Sesso</label>
+        <div class="field"><label for="age">Età</label><input type="number" id="age" min="0" max="120" inputmode="numeric"></div>
+        <div class="field"><label for="sex">Sesso</label>
           <select id="sex"><option value="uomo">Uomo</option><option value="donna">Donna</option></select>
         </div>
       </div>
       <div class="row">
-        <div class="field"><label>Peso (kg)</label><input type="number" step="0.1" id="weight"></div>
-        <div class="field"><label>Altezza (cm)</label><input type="number" id="height"></div>
+        <div class="field"><label for="weight">Peso (kg)</label><input type="number" step="0.1" id="weight" min="0" inputmode="decimal"></div>
+        <div class="field"><label for="height">Altezza (cm)</label><input type="number" id="height" min="0" inputmode="numeric"></div>
       </div>
       <div class="field">
-        <label>Livello attività</label>
+        <label for="activity">Livello attività</label>
         <select id="activity">
           <option value="sedentario">Sedentario</option>
           <option value="leggero">Leggero (1-3 allenamenti/sett)</option>
@@ -381,11 +468,11 @@
         </select>
       </div>
       <div class="field">
-        <label>Obiettivo</label>
+        <label for="goal">Obiettivo</label>
         <input type="text" id="goal" value="Dimagrimento (definizione) preservando la massa magra">
       </div>
       <div class="field">
-        <label>Schede alimentari passate / contesto storico</label>
+        <label for="history">Schede alimentari passate / contesto storico</label>
         <textarea id="history" rows="4" placeholder="Incolla qui le tue vecchie schede, macro e approcci passati..."></textarea>
       </div>
       <button class="primary" id="btnSaveProfile" style="width:100%;">Salva profilo</button>
@@ -396,12 +483,12 @@
       <summary><h2>🎯 Target giornalieri</h2><span class="summary-hint" id="hintTarget"></span></summary>
       <div class="panel-body">
       <div class="row">
-        <div class="field"><label>Kcal</label><input type="number" id="tKcal"></div>
-        <div class="field"><label>Proteine (g)</label><input type="number" id="tProtein"></div>
+        <div class="field"><label for="tKcal">Kcal</label><input type="number" id="tKcal" min="0" inputmode="numeric"></div>
+        <div class="field"><label for="tProtein">Proteine (g)</label><input type="number" id="tProtein" min="0" inputmode="numeric"></div>
       </div>
       <div class="row">
-        <div class="field"><label>Carboidrati (g)</label><input type="number" id="tCarbs"></div>
-        <div class="field"><label>Grassi (g)</label><input type="number" id="tFat"></div>
+        <div class="field"><label for="tCarbs">Carboidrati (g)</label><input type="number" id="tCarbs" min="0" inputmode="numeric"></div>
+        <div class="field"><label for="tFat">Grassi (g)</label><input type="number" id="tFat" min="0" inputmode="numeric"></div>
       </div>
       <button class="ghost" id="btnSuggestTargets" style="width:100%;">Chiedi all'AI di proporre i target</button>
       </div>
@@ -423,11 +510,11 @@
       <div class="panel-body">
       <div class="weeklylog" id="weeklyLog"><div class="small">Nessun check ancora registrato.</div></div>
       <div class="field" style="margin-top:12px;">
-        <label>Peso attuale (kg)</label>
-        <input type="number" step="0.1" id="checkWeight">
+        <label for="checkWeight">Peso attuale (kg)</label>
+        <input type="number" step="0.1" id="checkWeight" min="0" inputmode="decimal">
       </div>
       <div class="field">
-        <label>Note (energia, sonno, sensazioni)</label>
+        <label for="checkNotes">Note (energia, sonno, sensazioni)</label>
         <textarea id="checkNotes" rows="2"></textarea>
       </div>
       <button class="ghost" id="btnCheck" style="width:100%;">Registra check settimanale</button>
@@ -477,9 +564,9 @@
       <div class="chat" id="chatLog">
         <div class="msg ai"><div class="tag">Coach AI</div>Ciao! Sono il tuo nutrizionista sportivo AI. Compila il profilo a sinistra, imposta i target (o chiedimi di proporteli), poi scrivimi qui cosa mangi durante la giornata: calcolerò i macro rimanenti e ti proporrò i pasti successivi per restare in target.</div>
       </div>
-      <div class="field" style="margin-bottom:10px;">
-        <label>Categoria pasto</label>
-        <div class="pill-group" id="mealCategoryGroup" data-value="pranzo">
+      <div class="field" style="margin-bottom:10px;" role="group" aria-label="Categoria pasto">
+        <label id="mealCategoryLabel">Categoria pasto</label>
+        <div class="pill-group" id="mealCategoryGroup" data-value="pranzo" role="radiogroup" aria-labelledby="mealCategoryLabel">
           <button type="button" class="pill" data-val="colazione">🌅 Colazione</button>
           <button type="button" class="pill" data-val="spuntino">🍎 Spuntino</button>
           <button type="button" class="pill active" data-val="pranzo">🍝 Pranzo</button>
@@ -488,11 +575,13 @@
         </div>
       </div>
       <div class="composer">
-        <textarea id="mealInput" placeholder="Es: ho mangiato 150g di petto di pollo, 80g di riso e verdure miste..."></textarea>
+        <textarea id="mealInput" placeholder="Es: ho mangiato 150g di petto di pollo, 80g di riso e verdure miste..." aria-label="Descrivi cosa hai mangiato"></textarea>
         <button class="primary" id="btnSend">Invia</button>
       </div>
-      <div style="margin-top:10px;">
-        <button class="ghost" id="btnResetDay">Reset giornata</button>
+      <div class="composer-actions">
+        <button class="ghost" id="btnManualAdd" type="button">✏️ Inserisci macro a mano</button>
+        <button class="ghost" id="btnResetDay" type="button">Reset giornata</button>
+        <span class="composer-hint" id="composerHint"></span>
       </div>
     </div>
   </div>
@@ -538,25 +627,67 @@ function getDay(dateKey){
 function today(){ return getDay(todayKey()); }
 
 // ---------- persistence ----------
+const MAX_CHAT_HISTORY = 120; // evita che la cronologia chat cresca all'infinito
+
 function loadState(){
   const raw = localStorage.getItem('nutriProfileState');
   if(raw){
     try{
       const parsed = JSON.parse(raw);
-      // migrazione da vecchio formato con "today" singolo
-      if(parsed.today && !parsed.diary){
-        parsed.diary = {};
-        parsed.diary[parsed.today.date] = {entries: parsed.today.entries, totals: parsed.today.totals};
-        delete parsed.today;
-      }
-      state = Object.assign(state, parsed);
-      if(!state.diary) state.diary = {};
+      state = migrateAndMerge(state, parsed);
     }catch(e){ console.error('stato corrotto', e); }
   }
   applyStateToUI();
 }
+
+// Migrazione dal vecchio formato + merge difensivo (usato da load e import)
+function migrateAndMerge(base, parsed){
+  if(!parsed || typeof parsed !== 'object') return base;
+  // migrazione da vecchio formato con "today" singolo
+  if(parsed.today && !parsed.diary){
+    parsed.diary = {};
+    parsed.diary[parsed.today.date] = {entries: parsed.today.entries || [], totals: parsed.today.totals || {kcal:0,protein:0,carbs:0,fat:0}};
+    delete parsed.today;
+  }
+  const merged = Object.assign({}, base, parsed);
+  // normalizzazione difensiva: garantisce che le strutture attese esistano
+  if(!merged.diary || typeof merged.diary !== 'object' || Array.isArray(merged.diary)) merged.diary = {};
+  Object.keys(merged.diary).forEach(k=>{
+    const d = merged.diary[k];
+    if(!d || !Array.isArray(d.entries)){ delete merged.diary[k]; return; }
+    if(!d.totals) d.totals = d.entries.reduce((a,e)=>({kcal:a.kcal+(Number(e.kcal)||0),protein:a.protein+(Number(e.protein)||0),carbs:a.carbs+(Number(e.carbs)||0),fat:a.fat+(Number(e.fat)||0)}),{kcal:0,protein:0,carbs:0,fat:0});
+  });
+  if(!merged.profile || typeof merged.profile !== 'object') merged.profile = base.profile;
+  if(!merged.targets || typeof merged.targets !== 'object') merged.targets = base.targets;
+  if(!Array.isArray(merged.weeklyChecks)) merged.weeklyChecks = [];
+  if(!Array.isArray(merged.chatHistory)) merged.chatHistory = [];
+  if(merged.chatHistory.length > MAX_CHAT_HISTORY) merged.chatHistory = merged.chatHistory.slice(-MAX_CHAT_HISTORY);
+  return merged;
+}
+
 function saveState(){
-  localStorage.setItem('nutriProfileState', JSON.stringify(state));
+  // mantieni la cronologia chat entro un limite ragionevole
+  if(state.chatHistory.length > MAX_CHAT_HISTORY){
+    state.chatHistory = state.chatHistory.slice(-MAX_CHAT_HISTORY);
+  }
+  try{
+    localStorage.setItem('nutriProfileState', JSON.stringify(state));
+  }catch(e){
+    // quota superata o storage non disponibile
+    console.error('Salvataggio non riuscito', e);
+    alert('Non riesco a salvare i dati (spazio del browser esaurito o modalita privata). Esporta il profilo per non perdere lo storico.');
+  }
+}
+
+// Chiede al browser di rendere persistente lo storage: su iOS/Safari i dati dei
+// siti non installati possono essere cancellati dopo giorni di inattivita.
+async function requestPersistentStorage(){
+  try{
+    if(navigator.storage && navigator.storage.persist){
+      const already = await navigator.storage.persisted();
+      if(!already) await navigator.storage.persist();
+    }
+  }catch(e){ /* non critico */ }
 }
 
 function applyStateToUI(){
@@ -573,6 +704,11 @@ function applyStateToUI(){
   document.getElementById('tProtein').value = state.targets.protein || '';
   document.getElementById('tCarbs').value = state.targets.carbs || '';
   document.getElementById('tFat').value = state.targets.fat || '';
+  renderAll();
+}
+
+// Punto unico di aggiornamento della UI: evita di dimenticare un render sparso.
+function renderAll(){
   updateStatusDot();
   renderGauges();
   renderChat();
@@ -580,6 +716,8 @@ function applyStateToUI(){
   checkBannerLogic();
   renderCalendar();
   renderMealsList();
+  renderPendingBanner();
+  updateComposerHint();
 }
 
 function updateStatusDot(){
@@ -773,7 +911,7 @@ function renderDayDetail(){
     <div class="dd-entries">
       ${day.entries.map(e=>`
         <div class="dd-entry">${escapeHtml(e.text)}
-          <div class="dd-macropill">kcal ${Math.round(e.kcal)} · P ${Math.round(e.protein)}g · C ${Math.round(e.carbs)}g · G ${Math.round(e.fat)}g</div>
+          <div class="dd-macropill">${e.pending ? 'da stimare' : `kcal ${Math.round(e.kcal)} · P ${Math.round(e.protein)}g · C ${Math.round(e.carbs)}g · G ${Math.round(e.fat)}g`}</div>
         </div>
       `).join('')}
     </div>
@@ -809,9 +947,17 @@ async function callAI(userPrompt, extraSystem){
   const model = state.profile.model || 'gemini-3.5-flash';
   if(!key){ throw new Error('Imposta prima la tua API key Gemini.'); }
 
+  if(!navigator.onLine){
+    const e = new Error('network');
+    e.isNetworkError = true;
+    throw e;
+  }
+
   const systemInstruction = DEFAULT_SYSTEM_ROLE + '\n\n--- CONTESTO UTENTE ---\n' + buildContext() + (extraSystem?('\n\n'+extraSystem):'');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+  // La chiave viaggia nell'header x-goog-api-key (non in query string):
+  // evita che finisca in cronologia, log o header Referer.
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const body = {
     systemInstruction: { parts: [{ text: systemInstruction }] },
     contents: [{ role:'user', parts:[{ text: userPrompt }] }]
@@ -821,7 +967,7 @@ async function callAI(userPrompt, extraSystem){
   try{
     res = await fetch(url, {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json', 'x-goog-api-key': key},
       body: JSON.stringify(body)
     });
   }catch(networkErr){
@@ -892,11 +1038,40 @@ function stripBlock(text, tag){
 }
 
 // ---------- actions ----------
+// aggiunge una voce al diario e ricalcola i totali della giornata
+function addEntry(day, entry){
+  day.entries.push(entry);
+  recomputeTotals(day);
+}
+function recomputeTotals(day){
+  day.totals = day.entries.reduce((a,e)=>({
+    kcal: a.kcal + (Number(e.kcal)||0),
+    protein: a.protein + (Number(e.protein)||0),
+    carbs: a.carbs + (Number(e.carbs)||0),
+    fat: a.fat + (Number(e.fat)||0)
+  }), {kcal:0,protein:0,carbs:0,fat:0});
+}
+
 async function sendMeal(){
   const input = document.getElementById('mealInput');
   const text = input.value.trim();
   if(!text) return;
   if(!state.profile.apiKey){ alert('Imposta prima la tua API key Gemini nel pannello a sinistra.'); return; }
+
+  const category = document.getElementById('mealCategoryGroup').dataset.value;
+
+  // OFFLINE: non perdo il pasto. Lo registro come "da stimare" e l'AI
+  // completera i macro appena torno online (oppure li inserisci a mano).
+  if(!navigator.onLine){
+    const day = today();
+    addEntry(day, {time:new Date().toISOString(), text, category, categoryLabel: nextMealLabel(day, category), pending:true, kcal:0, protein:0, carbs:0, fat:0});
+    input.value='';
+    state.chatHistory.push({role:'user', text});
+    state.chatHistory.push({role:'ai', text:"📴 Sei offline: ho salvato il pasto. Stimero i macro appena torni online, oppure inseriscili a mano con la matita ✏️ sul pasto."});
+    renderAll();
+    saveState();
+    return;
+  }
 
   state.chatHistory.push({role:'user', text});
   renderChat();
@@ -916,25 +1091,27 @@ Rispondi in due parti obbligatorie:
     const clean = stripBlock(raw,'MACROS');
 
     const day = today();
-    const category = document.getElementById('mealCategoryGroup').dataset.value;
     const categoryLabel = nextMealLabel(day, category);
-    day.entries.push({time:new Date().toISOString(), text, category, categoryLabel, ...macros});
-    day.totals.kcal += Number(macros.kcal)||0;
-    day.totals.protein += Number(macros.protein)||0;
-    day.totals.carbs += Number(macros.carbs)||0;
-    day.totals.fat += Number(macros.fat)||0;
+    addEntry(day, {time:new Date().toISOString(), text, category, categoryLabel, pending:false,
+      kcal:Number(macros.kcal)||0, protein:Number(macros.protein)||0, carbs:Number(macros.carbs)||0, fat:Number(macros.fat)||0});
 
     removeLoadingBubble();
     state.chatHistory.push({role:'ai', text: clean, macros});
-    renderChat();
-    renderGauges();
-    renderCalendar();
-    renderMealsList();
+    renderAll();
     saveState();
   }catch(err){
     removeLoadingBubble();
-    state.chatHistory.push({role:'ai', text: '⚠️ '+friendlyError(err)});
-    renderChat();
+    // se la rete e caduta durante l'invio, salvo comunque il pasto come "da stimare"
+    if(err && err.isNetworkError){
+      const day = today();
+      addEntry(day, {time:new Date().toISOString(), text, category, categoryLabel: nextMealLabel(day, category), pending:true, kcal:0, protein:0, carbs:0, fat:0});
+      state.chatHistory.push({role:'ai', text:'📴 '+friendlyError(err)+' Ho salvato il pasto come "da stimare".'});
+      renderAll();
+      saveState();
+    } else {
+      state.chatHistory.push({role:'ai', text: '⚠️ '+friendlyError(err)});
+      renderChat();
+    }
   } finally {
     btn.disabled = false;
   }
@@ -1059,13 +1236,9 @@ function renderSuggestions(suggestions, mealType){
       const macros = {kcal:Number(s.kcal)||0, protein:Number(s.protein)||0, carbs:Number(s.carbs)||0, fat:Number(s.fat)||0};
       const text = `${s.title} — ${s.description}`;
       const categoryLabel = nextMealLabel(day, mealType);
-      day.entries.push({time:new Date().toISOString(), text, category:mealType, categoryLabel, ...macros});
-      day.totals.kcal += macros.kcal;
-      day.totals.protein += macros.protein;
-      day.totals.carbs += macros.carbs;
-      day.totals.fat += macros.fat;
+      addEntry(day, {time:new Date().toISOString(), text, category:mealType, categoryLabel, pending:false, ...macros});
       state.chatHistory.push({role:'ai', text:`✅ Aggiunto al diario: ${s.title}`, macros});
-      renderChat(); renderGauges(); renderCalendar(); renderMealsList(); saveState();
+      renderAll(); saveState();
       b.textContent = 'Aggiunto ✓'; b.disabled = true;
     });
   });
@@ -1091,9 +1264,7 @@ function saveProfileFromUI(){
   if(!state.profileCreated) state.profileCreated = todayKey();
   const keyGuideEl = document.getElementById('keyGuideDetails');
   if(keyGuideEl) keyGuideEl.open = !state.profile.apiKey;
-  updateStatusDot();
-  renderGauges();
-  checkBannerLogic();
+  renderAll();
   saveState();
 }
 
@@ -1111,24 +1282,28 @@ function exportProfile(){
 function importProfile(file){
   const reader = new FileReader();
   reader.onload = (e)=>{
+    let parsed;
     try{
-      const parsed = JSON.parse(e.target.result);
-      const keptKey = state.profile.apiKey;
-      if(parsed.today && !parsed.diary){
-        parsed.diary = {};
-        parsed.diary[parsed.today.date] = {entries: parsed.today.entries, totals: parsed.today.totals};
-        delete parsed.today;
-      }
-      state = Object.assign(state, parsed);
-      if(!state.diary) state.diary = {};
-      state.profile.apiKey = state.profile.apiKey || keptKey;
-      calSelectedDate = todayKey();
-      applyStateToUI();
-      saveState();
-      alert('Profilo importato correttamente.');
+      parsed = JSON.parse(e.target.result);
     }catch(err){
-      alert('File non valido: '+err.message);
+      alert('File non valido: non e un JSON leggibile.');
+      return;
     }
+    // validazione minima: deve assomigliare a un profilo esportato dall'app
+    const looksValid = parsed && typeof parsed === 'object' &&
+      (parsed.profile || parsed.targets || parsed.diary || parsed.today);
+    if(!looksValid){
+      alert('File non valido: non sembra un profilo NutrizionistaAI.');
+      return;
+    }
+    if(!confirm('Importando sovrascrivi il profilo e lo storico attuali. Continuare?')) return;
+    const keptKey = state.profile.apiKey;
+    state = migrateAndMerge(state, parsed);
+    state.profile.apiKey = state.profile.apiKey || keptKey; // la chiave non viene esportata
+    calSelectedDate = todayKey();
+    applyStateToUI();
+    saveState();
+    alert('Profilo importato correttamente.');
   };
   reader.readAsText(file);
 }
@@ -1147,19 +1322,24 @@ function renderMealsList(){
   listEl.innerHTML = day.entries.map((e,i)=>{
     const time = e.time ? new Date(e.time).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}) : '';
     const label = e.categoryLabel || 'Pasto';
+    const pendingTag = e.pending ? '<span class="pending-tag">da stimare</span>' : '';
+    const macros = e.pending
+      ? '<span>macro da stimare</span>'
+      : `<span>kcal ${Math.round(e.kcal)||0}</span>
+         <span>P ${Math.round(e.protein)||0}g</span>
+         <span>C ${Math.round(e.carbs)||0}g</span>
+         <span>G ${Math.round(e.fat)||0}g</span>`;
     return `
-      <div class="meal-row">
+      <div class="meal-row${e.pending?' pending':''}">
         <div class="meal-row-main">
-          <div class="meal-row-label">${escapeHtml(label)}<span class="meal-row-time">${time}</span></div>
+          <div class="meal-row-label">${escapeHtml(label)}${pendingTag}<span class="meal-row-time">${time}</span></div>
           <div class="meal-row-text">${escapeHtml(e.text)}</div>
-          <div class="macropill">
-            <span>kcal ${Math.round(e.kcal)||0}</span>
-            <span>P ${Math.round(e.protein)||0}g</span>
-            <span>C ${Math.round(e.carbs)||0}g</span>
-            <span>G ${Math.round(e.fat)||0}g</span>
-          </div>
+          <div class="macropill">${macros}</div>
         </div>
-        <button class="meal-row-remove" data-remove="${i}" title="Rimuovi pasto">✕</button>
+        <div class="meal-row-actions">
+          <button class="meal-row-btn edit" data-edit="${i}" title="Modifica pasto" aria-label="Modifica questo pasto">✏️</button>
+          <button class="meal-row-btn remove" data-remove="${i}" title="Rimuovi pasto" aria-label="Rimuovi questo pasto">✕</button>
+        </div>
       </div>
     `;
   }).join('');
@@ -1167,22 +1347,17 @@ function renderMealsList(){
   listEl.querySelectorAll('button[data-remove]').forEach(b=>{
     b.addEventListener('click', ()=> removeMealEntry(Number(b.dataset.remove)));
   });
+  listEl.querySelectorAll('button[data-edit]').forEach(b=>{
+    b.addEventListener('click', ()=> openMealEditor('edit', Number(b.dataset.edit)));
+  });
 }
 
 function removeMealEntry(index){
   const day = today();
   if(!day.entries[index]) return;
   day.entries.splice(index, 1);
-  day.totals = day.entries.reduce((acc,e)=>{
-    acc.kcal += Number(e.kcal)||0;
-    acc.protein += Number(e.protein)||0;
-    acc.carbs += Number(e.carbs)||0;
-    acc.fat += Number(e.fat)||0;
-    return acc;
-  }, {kcal:0,protein:0,carbs:0,fat:0});
-  renderMealsList();
-  renderGauges();
-  renderCalendar();
+  recomputeTotals(day);
+  renderAll();
   saveState();
 }
 
@@ -1190,8 +1365,215 @@ function resetDay(){
   if(!confirm('Azzerare il diario di oggi?')) return;
   state.diary[todayKey()] = emptyDay();
   state.chatHistory = [];
-  renderChat(); renderGauges(); renderCalendar(); renderMealsList(); saveState();
+  renderAll(); saveState();
 }
+
+// ---------- stato rete (online/offline) ----------
+function updateNetIndicator(){
+  const ind = document.getElementById('netIndicator');
+  const label = document.getElementById('netLabel');
+  if(navigator.onLine){ ind.classList.remove('offline'); label.textContent = 'Online'; }
+  else { ind.classList.add('offline'); label.textContent = 'Offline'; }
+}
+function onNetworkChange(){
+  updateNetIndicator();
+  renderPendingBanner();
+  updateComposerHint();
+}
+window.addEventListener('online', onNetworkChange);
+window.addEventListener('offline', onNetworkChange);
+
+// hint del composer + etichetta del pulsante Invia in base allo stato rete
+function updateComposerHint(){
+  const hint = document.getElementById('composerHint');
+  const btnSend = document.getElementById('btnSend');
+  if(!hint || !btnSend) return;
+  if(!navigator.onLine){
+    hint.textContent = "📴 Offline: i pasti vengono salvati e stimati al ritorno online, o inserisci i macro a mano.";
+    btnSend.textContent = 'Salva pasto';
+  } else {
+    hint.textContent = '';
+    btnSend.textContent = 'Invia';
+  }
+}
+
+// ---------- pasti "da stimare" (registrati offline) ----------
+function countPendingMeals(){
+  let count = 0;
+  Object.values(state.diary).forEach(d=> (d.entries||[]).forEach(e=>{ if(e.pending) count++; }));
+  return count;
+}
+function renderPendingBanner(){
+  const banner = document.getElementById('pendingBanner');
+  const textEl = document.getElementById('pendingText');
+  const btn = document.getElementById('btnEstimatePending');
+  if(!banner) return;
+  const count = countPendingMeals();
+  if(count===0){ banner.style.display='none'; return; }
+  const plural = count===1 ? 'o' : 'i';
+  textEl.textContent = `📴 ${count} past${plural} in attesa di stima AI (registrat${plural} offline).`;
+  banner.style.display='flex';
+  btn.disabled = !navigator.onLine;
+  btn.textContent = navigator.onLine ? "Stima ora con l'AI" : 'Torna online per stimare';
+}
+
+// stima i macro di un singolo testo pasto (prompt minimale, indipendente dal giorno)
+async function estimateMealMacros(text){
+  const prompt = `Stima i macronutrienti di questo pasto: "${text}". Rispondi SOLO con questo blocco, nient'altro:
+<MACROS>{"kcal":numero,"protein":numero,"carbs":numero,"fat":numero}</MACROS>`;
+  const raw = await callAI(prompt);
+  const m = extractBlock(raw,'MACROS') || {kcal:0,protein:0,carbs:0,fat:0};
+  return {kcal:Number(m.kcal)||0, protein:Number(m.protein)||0, carbs:Number(m.carbs)||0, fat:Number(m.fat)||0};
+}
+
+async function estimatePendingMeals(){
+  if(!navigator.onLine){ alert('Sei ancora offline.'); return; }
+  if(!state.profile.apiKey){ alert('Imposta prima la tua API key Gemini.'); return; }
+  // raccolgo i riferimenti a tutte le voci pending in tutte le giornate
+  const pend = [];
+  Object.keys(state.diary).forEach(dk=>{
+    (state.diary[dk].entries||[]).forEach(e=>{ if(e.pending) pend.push({dk, e}); });
+  });
+  if(pend.length===0) return;
+
+  const btn = document.getElementById('btnEstimatePending');
+  btn.disabled = true; btn.textContent = 'Stimo...';
+  let done = 0, failed = 0;
+  for(const {dk, e} of pend){
+    try{
+      const macros = await estimateMealMacros(e.text);
+      e.kcal = macros.kcal; e.protein = macros.protein; e.carbs = macros.carbs; e.fat = macros.fat;
+      e.pending = false;
+      recomputeTotals(state.diary[dk]);
+      done++;
+    }catch(err){ failed++; }
+  }
+  if(done) state.chatHistory.push({role:'ai', text:`✅ Ho stimato i macro di ${done} past${done===1?'o':'i'} in sospeso.`});
+  if(failed) state.chatHistory.push({role:'ai', text:`⚠️ Non sono riuscito a stimarne ${failed}. Riprova o inseriscili a mano.`});
+  renderAll();
+  saveState();
+}
+
+// ---------- editor pasto (inserimento manuale / modifica) ----------
+let editorContext = null;        // {mode:'add'|'edit', index}
+let lastFocusedBeforeModal = null;
+
+function setPillGroup(group, value){
+  group.dataset.value = value;
+  group.querySelectorAll('.pill').forEach(b=> b.classList.toggle('active', b.dataset.val === value));
+}
+
+function openMealEditor(mode, index){
+  const overlay = document.getElementById('mealEditorOverlay');
+  editorContext = {mode, index: (typeof index==='number' ? index : null)};
+  const eyebrow = document.getElementById('mealEditorEyebrow');
+  const title = document.getElementById('mealEditorTitle');
+  const grp = document.getElementById('editorCategoryGroup');
+  document.getElementById('editorError').textContent = '';
+
+  if(mode==='edit' && editorContext.index!=null){
+    const e = today().entries[editorContext.index];
+    if(!e) return;
+    eyebrow.textContent = 'Modifica pasto';
+    title.textContent = 'Modifica il pasto';
+    document.getElementById('editorText').value = e.text || '';
+    document.getElementById('editorKcal').value = e.kcal || '';
+    document.getElementById('editorProtein').value = e.protein || '';
+    document.getElementById('editorCarbs').value = e.carbs || '';
+    document.getElementById('editorFat').value = e.fat || '';
+    setPillGroup(grp, e.category || 'pranzo');
+  } else {
+    eyebrow.textContent = 'Inserimento manuale';
+    title.textContent = 'Aggiungi un pasto';
+    document.getElementById('editorText').value = '';
+    document.getElementById('editorKcal').value = '';
+    document.getElementById('editorProtein').value = '';
+    document.getElementById('editorCarbs').value = '';
+    document.getElementById('editorFat').value = '';
+    setPillGroup(grp, document.getElementById('mealCategoryGroup').dataset.value || 'pranzo');
+  }
+  lastFocusedBeforeModal = document.activeElement;
+  overlay.classList.remove('hidden');
+  setTimeout(()=>{ const t = document.getElementById('editorText'); if(t) t.focus(); }, 30);
+}
+
+function closeMealEditor(){
+  document.getElementById('mealEditorOverlay').classList.add('hidden');
+  editorContext = null;
+  if(lastFocusedBeforeModal && lastFocusedBeforeModal.focus) lastFocusedBeforeModal.focus();
+}
+
+function saveMealEditor(){
+  if(!editorContext) return;
+  const text = document.getElementById('editorText').value.trim();
+  const errorEl = document.getElementById('editorError');
+  if(!text){ errorEl.textContent = 'Scrivi cosa hai mangiato.'; return; }
+  const macros = {
+    kcal: Number(document.getElementById('editorKcal').value)||0,
+    protein: Number(document.getElementById('editorProtein').value)||0,
+    carbs: Number(document.getElementById('editorCarbs').value)||0,
+    fat: Number(document.getElementById('editorFat').value)||0
+  };
+  const category = document.getElementById('editorCategoryGroup').dataset.value;
+  const day = today();
+
+  if(editorContext.mode==='edit' && editorContext.index!=null){
+    const e = day.entries[editorContext.index];
+    if(e){
+      if(e.category !== category) e.categoryLabel = MEAL_CATEGORIES[category] || 'Pasto';
+      e.text = text; e.category = category;
+      e.kcal = macros.kcal; e.protein = macros.protein; e.carbs = macros.carbs; e.fat = macros.fat;
+      e.pending = false; // ora ha macro definiti
+    }
+  } else {
+    addEntry(day, {time:new Date().toISOString(), text, category, categoryLabel: nextMealLabel(day, category), pending:false, ...macros});
+  }
+  recomputeTotals(day);
+  closeMealEditor();
+  renderAll();
+  saveState();
+}
+
+// ---------- focus management dei modali (trap Tab + Esc) ----------
+function getOpenOverlay(){
+  const ids = ['onboardingOverlay','tourOverlay','mealEditorOverlay'];
+  for(const id of ids){
+    const el = document.getElementById(id);
+    if(el && !el.classList.contains('hidden')) return el;
+  }
+  return null;
+}
+document.addEventListener('keydown', (e)=>{
+  const overlay = getOpenOverlay();
+  if(!overlay) return;
+  if(e.key === 'Tab'){
+    const focusables = Array.from(overlay.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+      .filter(el=> !el.disabled && el.offsetParent !== null);
+    if(focusables.length === 0) return;
+    const first = focusables[0], last = focusables[focusables.length-1];
+    if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+  } else if(e.key === 'Escape'){
+    // l'onboarding (blocco chiave) non e chiudibile con Esc
+    if(overlay.id === 'mealEditorOverlay'){ closeMealEditor(); }
+    else if(overlay.id === 'tourOverlay'){ overlay.classList.add('hidden'); state.tourSeen = true; saveState(); }
+  }
+});
+
+// ---------- cambio giorno a mezzanotte con app aperta ----------
+let lastRenderedDay = todayKey();
+function checkDayRollover(){
+  const now = todayKey();
+  if(now !== lastRenderedDay){
+    const wasViewingToday = (calSelectedDate === lastRenderedDay);
+    lastRenderedDay = now;
+    if(wasViewingToday) calSelectedDate = now;
+    calViewDate = new Date();
+    renderAll();
+  }
+}
+setInterval(checkDayRollover, 60*1000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) checkDayRollover(); });
 
 // ---------- events ----------
 document.getElementById('btnSend').addEventListener('click', sendMeal);
@@ -1214,11 +1596,25 @@ document.getElementById('btnScrollCheck').addEventListener('click', ()=>{
   document.getElementById(id).addEventListener('change', saveProfileFromUI);
 });
 
+// editor pasto (inserimento manuale + modifica) e coda "da stimare"
+wirePillGroup('editorCategoryGroup');
+document.getElementById('btnManualAdd').addEventListener('click', ()=> openMealEditor('add'));
+document.getElementById('btnMealEditorSave').addEventListener('click', saveMealEditor);
+document.getElementById('btnMealEditorCancel').addEventListener('click', closeMealEditor);
+document.getElementById('btnMealEditorClose').addEventListener('click', closeMealEditor);
+document.getElementById('btnEstimatePending').addEventListener('click', estimatePendingMeals);
+// chiudi l'editor cliccando sullo sfondo scuro (non sui figli)
+document.getElementById('mealEditorOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'mealEditorOverlay') closeMealEditor();
+});
+
 document.getElementById('btnOpenAIStudio').addEventListener('click', ()=>{
   window.open('https://aistudio.google.com/apikey', '_blank', 'noopener');
 });
 
+updateNetIndicator();
 loadState();
+requestPersistentStorage();
 
 // apre la guida "come ottenere la chiave" automaticamente solo se non ne hai già impostata una
 const keyGuide = document.getElementById('keyGuideDetails');
@@ -1229,6 +1625,7 @@ const onboardingOverlay = document.getElementById('onboardingOverlay');
 if(!state.profile.apiKey){
   document.getElementById('apiKeyOnboarding').value = '';
   onboardingOverlay.classList.remove('hidden');
+  setTimeout(()=>{ const el = document.getElementById('apiKeyOnboarding'); if(el) el.focus(); }, 50);
 }
 
 document.getElementById('btnOpenAIStudioOnboarding').addEventListener('click', ()=>{
@@ -1274,6 +1671,7 @@ function openTour(){
   tourStep = 0;
   renderTourStep();
   tourOverlay.classList.remove('hidden');
+  setTimeout(()=>{ const el = document.getElementById('btnTourNext'); if(el) el.focus(); }, 50);
 }
 
 function maybeShowTour(){
