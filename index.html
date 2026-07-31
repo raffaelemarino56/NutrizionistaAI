@@ -138,6 +138,11 @@
   .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
 
   /* guida "come ottenere la chiave API" */
+  /* overlay di onboarding: blocca l'app finché non c'è una chiave */
+  .onboarding-overlay{position:fixed;inset:0;background:rgba(26,37,48,.55);backdrop-filter:blur(3px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;}
+  .onboarding-overlay.hidden{display:none;}
+  .onboarding-card{background:var(--surface);border-radius:24px;padding:26px 24px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);max-height:calc(100vh - 40px);overflow-y:auto;}
+
   .key-guide{background:var(--protein-container);border-radius:14px;padding:2px 14px;margin-bottom:16px;}
   .key-guide summary{list-style:none;cursor:pointer;padding:12px 0;font-size:13px;font-weight:600;color:var(--on-protein-container);display:flex;align-items:center;justify-content:space-between;}
   .key-guide summary::-webkit-details-marker{display:none;}
@@ -207,12 +212,55 @@
 </head>
 <body>
 
+<div class="onboarding-overlay hidden" id="onboardingOverlay">
+  <div class="onboarding-card">
+    <div class="eyebrow">Prima di iniziare</div>
+    <h1 style="font-size:19px;margin:6px 0 4px;">Serve la tua chiave Gemini</h1>
+    <p class="small" style="margin-bottom:18px;">L'app usa Gemini per generare i consigli nutrizionali. La chiave resta solo nel tuo telefono/browser, non viene mai inviata altrove.</p>
+
+    <div class="field">
+      <label>Chiave API Gemini</label>
+      <input type="password" id="apiKeyOnboarding" placeholder="incolla qui la tua API key">
+    </div>
+    <div class="small" id="onboardingError" style="color:var(--danger);min-height:16px;margin:-6px 0 10px;"></div>
+
+    <details class="key-guide" open>
+      <summary>Non hai una chiave? Te la faccio ottenere in 30 secondi ↓</summary>
+      <ol class="stepper">
+        <li><span class="step-num">1</span><div><strong>Apri Google AI Studio</strong><br>Con lo stesso account Google che usi di solito. È gratis, non serve carta di credito.</div></li>
+        <li><span class="step-num">2</span><div><strong>Clicca "Create API key"</strong><br>Il pulsante blu in alto a destra nella pagina.</div></li>
+        <li><span class="step-num">3</span><div><strong>Copia il codice</strong><br>Inizia con "AIza...". Fai tap per copiarlo.</div></li>
+        <li><span class="step-num">4</span><div><strong>Incollalo nel campo qui sopra</strong><br>Resta solo nel tuo telefono, non lo vede nessun altro.</div></li>
+      </ol>
+      <button class="ghost" id="btnOpenAIStudioOnboarding" type="button" style="width:100%;">Apri Google AI Studio ↗</button>
+    </details>
+
+    <button class="primary" id="btnOnboardingOk" style="width:100%;margin-top:16px;">OK, ho la chiave →</button>
+  </div>
+</div>
+
+<div class="onboarding-overlay hidden" id="tourOverlay">
+  <div class="onboarding-card">
+    <div class="eyebrow">Come funziona</div>
+    <h1 style="font-size:19px;margin:6px 0 16px;">3 passi per iniziare</h1>
+
+    <ol class="stepper">
+      <li><span class="step-num">1</span><div><strong>Compila il tuo profilo</strong><br>Età, peso, altezza e obiettivo, nel pannello a sinistra — bastano 30 secondi.</div></li>
+      <li><span class="step-num">2</span><div><strong>Chiedi all'AI i tuoi target</strong><br>Nel pannello "Target giornalieri", premi "Chiedi all'AI di proporre i target": calcola kcal e macro adatti al tuo obiettivo.</div></li>
+      <li><span class="step-num">3</span><div><strong>Inizia a registrare i pasti</strong><br>Scrivi cosa mangi nel diario in basso: l'AI calcola i macro e ti aiuta a restare in target per il resto della giornata.</div></li>
+    </ol>
+
+    <button class="primary" id="btnTourOk" style="width:100%;margin-top:8px;">Ho capito, inizia →</button>
+  </div>
+</div>
+
 <header>
   <div>
     <div class="eyebrow">Ricomposizione corporea · Definizione</div>
     <h1>NutrizionistaAI</h1>
   </div>
   <div class="actions">
+    <button class="ghost" id="btnShowTour" title="Come funziona l'app">ℹ️ Guida</button>
     <button class="primary" id="btnInstall" style="display:none;">📲 Installa app</button>
     <button class="ghost" id="btnExport">Esporta profilo JSON</button>
     <button class="ghost" id="btnImportTrigger">Importa profilo</button>
@@ -417,7 +465,8 @@ let state = {
   targets:{kcal:'',protein:'',carbs:'',fat:''},
   diary:{}, // dateKey -> {entries:[], totals:{kcal,protein,carbs,fat}}
   weeklyChecks:[],
-  chatHistory:[]
+  chatHistory:[],
+  tourSeen:false
 };
 let calViewDate = new Date(); // mese attualmente mostrato nel calendario
 let calSelectedDate = todayKey();
@@ -640,7 +689,7 @@ function checkBannerLogic(){
 }
 
 // ---------- Gemini API ----------
-async function callGemini(userPrompt, extraSystem){
+async function callAI(userPrompt, extraSystem){
   const key = state.profile.apiKey;
   const model = state.profile.model || 'gemini-3.5-flash';
   if(!key){ throw new Error('Imposta prima la tua API key Gemini.'); }
@@ -722,7 +771,7 @@ Rispondi in due parti obbligatorie:
 2) Subito dopo, in linguaggio naturale, il tuo commento da coach: macro/kcal rimanenti nella giornata e proposte concrete per i prossimi pasti per rientrare nei target, mantenendo un'alimentazione bilanciata.`;
 
   try{
-    const raw = await callGemini(prompt);
+    const raw = await callAI(prompt);
     const macros = extractBlock(raw,'MACROS') || {kcal:0,protein:0,carbs:0,fat:0};
     const clean = stripBlock(raw,'MACROS');
 
@@ -772,7 +821,7 @@ async function suggestTargets(){
     const prompt = `In base al profilo fornito nel contesto, proponi target giornalieri per la fase di definizione (deficit calorico moderato, alta proteina per preservare massa magra). Rispondi SOLO con questo blocco, nient'altro:
 <TARGETS>{"kcal":numero,"protein":numero,"carbs":numero,"fat":numero}</TARGETS>
 Poi in 2-3 righe spiega brevemente la logica.`;
-    const raw = await callGemini(prompt);
+    const raw = await callAI(prompt);
     const targets = extractBlock(raw,'TARGETS');
     if(targets){
       state.targets = targets;
@@ -809,7 +858,7 @@ async function logWeeklyCheck(){
   if(state.profile.apiKey){
     try{
       const prompt = `L'utente ha appena registrato il check settimanale: peso ${weight}kg, note: "${notes}". Storico check precedenti: ${JSON.stringify(state.weeklyChecks)}. Valuta l'andamento (peso, energia, aderenza) e proponi se mantenere o modificare target/macro per la prossima settimana, in modo concreto.`;
-      const raw = await callGemini(prompt);
+      const raw = await callAI(prompt);
       state.chatHistory.push({role:'ai', text:'📊 Check settimanale — '+raw});
       renderChat();
       saveState();
@@ -832,7 +881,7 @@ async function suggestMeal(){
     const prompt = `Proponi 3 idee concrete e diverse tra loro per il pasto "${mealType}" di oggi, pensate per rientrare nei macro/kcal rimanenti della giornata indicati nel contesto (senza sforare, idealmente usando circa la quota di macro adatta a questo pasto). Alimentazione da bodybuilding/definizione: cibi reali, facili da preparare.
 Rispondi SOLO con questo blocco JSON, nient'altro prima o dopo:
 <SUGGESTIONS>[{"title":"nome piatto","description":"breve descrizione con quantità indicative","kcal":numero,"protein":numero,"carbs":numero,"fat":numero}, {"title":"...","description":"...","kcal":numero,"protein":numero,"carbs":numero,"fat":numero}, {"title":"...","description":"...","kcal":numero,"protein":numero,"carbs":numero,"fat":numero}]</SUGGESTIONS>`;
-    const raw = await callGemini(prompt);
+    const raw = await callAI(prompt);
     const suggestions = extractBlock(raw,'SUGGESTIONS');
     if(!suggestions || !Array.isArray(suggestions)){
       cardsEl.innerHTML = '<div class="small">Non sono riuscito a generare idee valide, riprova.</div>';
@@ -1032,6 +1081,66 @@ loadState();
 // apre la guida "come ottenere la chiave" automaticamente solo se non ne hai già impostata una
 const keyGuide = document.getElementById('keyGuideDetails');
 if(!state.profile.apiKey){ keyGuide.open = true; }
+
+// ---------- overlay di onboarding: blocca l'app finché non c'è una chiave valida ----------
+const onboardingOverlay = document.getElementById('onboardingOverlay');
+if(!state.profile.apiKey){
+  document.getElementById('apiKeyOnboarding').value = '';
+  onboardingOverlay.classList.remove('hidden');
+}
+
+document.getElementById('btnOpenAIStudioOnboarding').addEventListener('click', ()=>{
+  window.open('https://aistudio.google.com/apikey', '_blank', 'noopener');
+});
+
+document.getElementById('btnOnboardingOk').addEventListener('click', ()=>{
+  const value = document.getElementById('apiKeyOnboarding').value.trim();
+  const errorEl = document.getElementById('onboardingError');
+  if(!value){
+    errorEl.textContent = 'Inserisci la chiave per continuare, oppure seguila i passaggi qui sotto per ottenerne una.';
+    return;
+  }
+  errorEl.textContent = '';
+  document.getElementById('apiKey').value = value; // sincronizzo col pannello impostazioni
+  saveProfileFromUI();
+  onboardingOverlay.classList.add('hidden');
+  maybeShowTour();
+});
+
+// invio con Enter anche dal campo dell'overlay
+document.getElementById('apiKeyOnboarding').addEventListener('keydown', (e)=>{
+  if(e.key==='Enter'){ e.preventDefault(); document.getElementById('btnOnboardingOk').click(); }
+});
+
+// ---------- tour guidato "come funziona l'app" (solo per utenti davvero nuovi) ----------
+const tourOverlay = document.getElementById('tourOverlay');
+
+function maybeShowTour(){
+  const isReturningUser = !!(state.profile.age || state.targets.kcal); // ha già dati salvati
+  if(isReturningUser && !state.tourSeen){
+    // dati da prima che esistesse questa funzionalità: non disturbare chi usa già l'app
+    state.tourSeen = true;
+    saveState();
+    return;
+  }
+  if(!state.tourSeen){
+    tourOverlay.classList.remove('hidden');
+  }
+}
+
+document.getElementById('btnTourOk').addEventListener('click', ()=>{
+  tourOverlay.classList.add('hidden');
+  state.tourSeen = true;
+  saveState();
+});
+
+document.getElementById('btnShowTour').addEventListener('click', ()=>{
+  tourOverlay.classList.remove('hidden');
+});
+
+// al primo caricamento: se la chiave c'è già, valuto subito se mostrare il tour
+// (se manca la chiave, ci penserà btnOnboardingOk una volta inserita)
+if(state.profile.apiKey){ maybeShowTour(); }
 
 // ---------- PWA: installazione + service worker ----------
 if('serviceWorker' in navigator){
