@@ -5,35 +5,44 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NutrizionistaAI — Coach Nutrizionale Sportivo</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#F4F7F6">
+<meta name="theme-color" content="#F4F7F6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1519" media="(prefers-color-scheme: dark)">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="NutrizionistaAI">
 <link rel="icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-apple-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,400..700&family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
+    color-scheme: light dark;
+
     /* 60% — dominante: sfondo neutro e pulito */
     --bg:#F4F7F6;
     --surface:#FFFFFF;
     --surface-2:#EAF0EF;
     --border:#D4DEDC;
+    --header-bg:rgba(244,247,246,.92);
 
-    /* 30% — struttura: tipografia e card */
+    /* 30% — struttura: tipografia e macro */
     --text:#1A2530;
-    --muted:#5B6B70;
+    --muted:#4A585C;              /* scurito (era #5B6B70) per contrasto AA sui testi piccoli */
     --protein:#2E8B90;
     --carbs:#C97B4A;
     --fat:#3E5C74;
-    --kcal:#1A2530;
+    --kcal:#D6A32E;               /* colore-firma "energia" (ambra), distinto dal testo e dai macro */
     --danger:#BA1A1A;
 
-    /* 10% — accento: solo per le azioni e i traguardi raggiunti */
-    --accent:#E8A598;
+    /* traguardo raggiunto: verde dedicato, distinto dal teal delle proteine */
+    --success:#3E9E4F;
+    --success-container:#D8F0DC;
+    --on-success-container:#0E3D1A;
+
+    /* 10% — accento: SOLO per le azioni/CTA (non piu per i traguardi) */
+    --accent:#E8896B;             /* coral piu deciso: i CTA risaltano di piu */
     --on-accent:#1A2530;
 
     --on-protein:#FFFFFF;
@@ -44,6 +53,40 @@
     --carbs-container:#F7E3D4;
     --on-carbs-container:#5A3418;
     --radius:20px;
+  }
+
+  /* ---- Dark mode: rispetta la preferenza di sistema ---- */
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0E1519;
+      --surface:#17222A;
+      --surface-2:#1E2C34;
+      --border:#2C3D46;
+      --header-bg:rgba(14,21,25,.92);
+
+      --text:#E6EDEF;
+      --muted:#9EAEB4;
+      --protein:#4FB3B8;
+      --carbs:#E0966A;
+      --fat:#7C9BB8;
+      --kcal:#E8B547;
+      --danger:#FF5449;
+
+      --success:#5CC46E;
+      --success-container:#123D1C;
+      --on-success-container:#BBF0C4;
+
+      --accent:#E8896B;
+      --on-accent:#1A2530;
+
+      --on-protein:#08201F;
+      --protein-container:#123B3D;
+      --on-protein-container:#AEE5E6;
+      --fat-container:#1D2A34;
+      --on-fat-container:#C4D4E0;
+      --carbs-container:#3A2417;
+      --on-carbs-container:#F5D9C4;
+    }
   }
   *{box-sizing:border-box;}
   html{overflow-x:hidden;width:100%;}
@@ -64,7 +107,7 @@
   .row{display:flex;gap:12px;}
   .row > *{flex:1;}
 
-  header{border-bottom:1px solid var(--border);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;position:sticky;top:0;background:rgba(244,247,246,.92);backdrop-filter:blur(6px);z-index:10;}
+  header{border-bottom:1px solid var(--border);padding:16px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;position:sticky;top:0;background:var(--header-bg);backdrop-filter:blur(6px);z-index:10;}
   header .eyebrow{color:var(--muted);font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-family:'Roboto Mono',monospace;}
   header h1{font-size:20px;letter-spacing:-.01em;}
   header .actions{display:flex;gap:10px;flex-wrap:wrap;}
@@ -113,12 +156,15 @@
   .gauge.protein .bar>div{background:var(--protein);}
   .gauge.carbs .bar>div{background:var(--carbs);}
   .gauge.fat .bar>div{background:var(--fat);}
+  .gauge.over{border-color:var(--danger);}
   .gauge.over .nums{color:var(--danger);}
-  .gauge.completed{border-color:var(--accent);}
-  .gauge.completed .nums{color:var(--on-accent);}
-  .gauge.completed .bar>div{background:var(--accent) !important;}
-  .check-icon{display:none;margin-left:3px;font-size:11px;}
+  /* traguardo raggiunto = verde (convenzione fitness), non piu il coral dei CTA */
+  .gauge.completed{border-color:var(--success);}
+  .gauge.completed .nums{color:var(--success);}
+  .gauge.completed .bar>div{background:var(--success) !important;}
+  .check-icon,.warn-icon{display:none;margin-left:3px;font-size:11px;}
   .gauge.completed .check-icon{display:inline;}
+  .gauge.over .warn-icon{display:inline;}
   @keyframes gaugePop{0%{transform:scale(1);}35%{transform:scale(1.06);}100%{transform:scale(1);}}
   .gauge.pop{animation:gaugePop .35s ease;}
 
@@ -530,10 +576,10 @@
     </div>
 
     <div class="gauges">
-      <div class="gauge kcal" id="gKcal"><div class="label">🔥 Kcal<span class="check-icon">✅</span></div><div class="nums"><span id="vKcal">0</span> <small>/ <span id="tKcalShow">-</span></small></div><div class="bar"><div id="bKcal" style="width:0%"></div></div></div>
-      <div class="gauge protein" id="gProtein"><div class="label">🥩 Proteine<span class="check-icon">✅</span></div><div class="nums"><span id="vProtein">0</span>g <small>/ <span id="tProteinShow">-</span>g</small></div><div class="bar"><div id="bProtein" style="width:0%"></div></div></div>
-      <div class="gauge carbs" id="gCarbs"><div class="label">🍞 Carboidrati<span class="check-icon">✅</span></div><div class="nums"><span id="vCarbs">0</span>g <small>/ <span id="tCarbsShow">-</span>g</small></div><div class="bar"><div id="bCarbs" style="width:0%"></div></div></div>
-      <div class="gauge fat" id="gFat"><div class="label">🥑 Grassi<span class="check-icon">✅</span></div><div class="nums"><span id="vFat">0</span>g <small>/ <span id="tFatShow">-</span>g</small></div><div class="bar"><div id="bFat" style="width:0%"></div></div></div>
+      <div class="gauge kcal" id="gKcal"><div class="label">🔥 Kcal<span class="check-icon">✅</span><span class="warn-icon" title="Oltre il target">⚠️</span></div><div class="nums"><span id="vKcal">0</span> <small>/ <span id="tKcalShow">-</span></small></div><div class="bar"><div id="bKcal" style="width:0%"></div></div></div>
+      <div class="gauge protein" id="gProtein"><div class="label">🥩 Proteine<span class="check-icon">✅</span><span class="warn-icon" title="Oltre il target">⚠️</span></div><div class="nums"><span id="vProtein">0</span>g <small>/ <span id="tProteinShow">-</span>g</small></div><div class="bar"><div id="bProtein" style="width:0%"></div></div></div>
+      <div class="gauge carbs" id="gCarbs"><div class="label">🍞 Carboidrati<span class="check-icon">✅</span><span class="warn-icon" title="Oltre il target">⚠️</span></div><div class="nums"><span id="vCarbs">0</span>g <small>/ <span id="tCarbsShow">-</span>g</small></div><div class="bar"><div id="bCarbs" style="width:0%"></div></div></div>
+      <div class="gauge fat" id="gFat"><div class="label">🥑 Grassi<span class="check-icon">✅</span><span class="warn-icon" title="Oltre il target">⚠️</span></div><div class="nums"><span id="vFat">0</span>g <small>/ <span id="tFatShow">-</span>g</small></div><div class="bar"><div id="bFat" style="width:0%"></div></div></div>
     </div>
 
     <details class="panel" open id="panelMeals">

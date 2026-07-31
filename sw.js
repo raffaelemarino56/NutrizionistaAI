@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nutrizionistaai-v6';
+const CACHE_NAME = 'nutrizionistaai-v7';
 const FONT_CACHE = 'nutrizionistaai-fonts-v1';
 
 // App shell: tutto cio che serve per far partire l'app anche senza rete.
@@ -9,7 +9,9 @@ const APP_SHELL = [
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/icon-512-maskable.png'
+  './icons/icon-512-maskable.png',
+  './icons/icon-512-monochrome.png',
+  './icons/icon-apple-180.png'
 ];
 
 self.addEventListener('install', (event) => {
