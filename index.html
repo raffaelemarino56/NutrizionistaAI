@@ -143,6 +143,13 @@
   .onboarding-overlay.hidden{display:none;}
   .onboarding-card{background:var(--surface);border-radius:24px;padding:26px 24px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);max-height:calc(100vh - 40px);overflow-y:auto;}
 
+  .tour-dots{display:flex;gap:6px;justify-content:center;margin-bottom:18px;}
+  .tour-dots .dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .2s ease;}
+  .tour-dots .dot.active{background:var(--protein);width:20px;border-radius:4px;}
+  .tour-bullets{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:9px;}
+  .tour-bullets li{font-size:13px;background:var(--surface-2);border-radius:10px;padding:9px 12px;}
+  .tour-tag{display:inline-block;background:var(--protein-container);color:var(--on-protein-container);border-radius:6px;padding:1px 8px;font-weight:600;font-size:12.5px;}
+
   .key-guide{background:var(--protein-container);border-radius:14px;padding:2px 14px;margin-bottom:16px;}
   .key-guide summary{list-style:none;cursor:pointer;padding:12px 0;font-size:13px;font-weight:600;color:var(--on-protein-container);display:flex;align-items:center;justify-content:space-between;}
   .key-guide summary::-webkit-details-marker{display:none;}
@@ -241,16 +248,49 @@
 
 <div class="onboarding-overlay hidden" id="tourOverlay">
   <div class="onboarding-card">
-    <div class="eyebrow">Come funziona</div>
-    <h1 style="font-size:19px;margin:6px 0 16px;">3 passi per iniziare</h1>
 
-    <ol class="stepper">
-      <li><span class="step-num">1</span><div><strong>Compila il tuo profilo</strong><br>Età, peso, altezza e obiettivo, nel pannello a sinistra — bastano 30 secondi.</div></li>
-      <li><span class="step-num">2</span><div><strong>Chiedi all'AI i tuoi target</strong><br>Nel pannello "Target giornalieri", premi "Chiedi all'AI di proporre i target": calcola kcal e macro adatti al tuo obiettivo.</div></li>
-      <li><span class="step-num">3</span><div><strong>Inizia a registrare i pasti</strong><br>Scrivi cosa mangi nel diario in basso: l'AI calcola i macro e ti aiuta a restare in target per il resto della giornata.</div></li>
-    </ol>
+    <div class="tour-dots">
+      <span class="dot" data-dot="0"></span>
+      <span class="dot" data-dot="1"></span>
+      <span class="dot" data-dot="2"></span>
+    </div>
 
-    <button class="primary" id="btnTourOk" style="width:100%;margin-top:8px;">Ho capito, inizia →</button>
+    <div class="tour-step" data-step="0">
+      <div class="eyebrow">Benvenuto</div>
+      <h1 style="font-size:19px;margin:6px 0 10px;">Cos'è NutrizionistaAI</h1>
+      <p class="small" style="font-size:13.5px;line-height:1.6;margin-bottom:14px;">
+        È il tuo coach nutrizionale AI, pensato per la ricomposizione corporea: ti aiuta a restare nei tuoi target di kcal e macro giorno per giorno, adattandosi ai pasti reali che fai — anche quando escono dal piano — con l'obiettivo di farti perdere grasso preservando il più possibile la massa magra.
+      </p>
+      <ul class="tour-bullets">
+        <li>📝 Registri i pasti scrivendo in linguaggio naturale</li>
+        <li>🎯 L'AI calcola i macro rimanenti in tempo reale</li>
+        <li>📅 Tiene uno storico giorno per giorno nel calendario</li>
+        <li>📊 Ti ricorda i check settimanali su peso e andamento</li>
+      </ul>
+    </div>
+
+    <div class="tour-step" data-step="1" style="display:none;">
+      <div class="eyebrow">Passo 1 di 2</div>
+      <h1 style="font-size:19px;margin:6px 0 10px;">Imposta il tuo profilo</h1>
+      <p class="small" style="font-size:13.5px;line-height:1.6;margin-bottom:14px;">
+        Prima di tutto, compila i tuoi dati nel pannello <span class="tour-tag">Il tuo profilo</span> a sinistra: età, peso, altezza, livello di attività e obiettivo. Servono all'AI per calcolare un fabbisogno energetico su misura per te, non generico.
+      </p>
+      <p class="small" style="font-size:12.5px;">Non preoccuparti di essere troppo preciso: potrai sempre aggiornarli più avanti.</p>
+    </div>
+
+    <div class="tour-step" data-step="2" style="display:none;">
+      <div class="eyebrow">Passo 2 di 2</div>
+      <h1 style="font-size:19px;margin:6px 0 10px;">Chiedi il tuo target all'AI</h1>
+      <p class="small" style="font-size:13.5px;line-height:1.6;margin-bottom:14px;">
+        Una volta compilato il profilo, vai nel pannello <span class="tour-tag">Target giornalieri</span> e premi <strong>"Chiedi all'AI di proporre i target"</strong>: calcolerà kcal, proteine, carboidrati e grassi adatti al tuo obiettivo di definizione.
+      </p>
+      <p class="small" style="font-size:12.5px;">Da lì in poi basta scrivere cosa mangi nel diario in basso: il resto lo fa l'AI.</p>
+    </div>
+
+    <div class="row" style="margin-top:6px;">
+      <button class="ghost" id="btnTourBack" style="display:none;">← Indietro</button>
+      <button class="primary" id="btnTourNext" style="flex:1;">Avanti →</button>
+    </div>
   </div>
 </div>
 
@@ -1112,8 +1152,27 @@ document.getElementById('apiKeyOnboarding').addEventListener('keydown', (e)=>{
   if(e.key==='Enter'){ e.preventDefault(); document.getElementById('btnOnboardingOk').click(); }
 });
 
-// ---------- tour guidato "come funziona l'app" (solo per utenti davvero nuovi) ----------
+// ---------- tour guidato "come funziona l'app" (wizard a schermate, solo per utenti nuovi) ----------
 const tourOverlay = document.getElementById('tourOverlay');
+const TOUR_STEPS = 3;
+let tourStep = 0;
+
+function renderTourStep(){
+  document.querySelectorAll('.tour-step').forEach(el=>{
+    el.style.display = (Number(el.dataset.step) === tourStep) ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tour-dots .dot').forEach(d=>{
+    d.classList.toggle('active', Number(d.dataset.dot) === tourStep);
+  });
+  document.getElementById('btnTourBack').style.display = tourStep === 0 ? 'none' : 'inline-flex';
+  document.getElementById('btnTourNext').textContent = (tourStep === TOUR_STEPS - 1) ? 'Ho capito, inizia →' : 'Avanti →';
+}
+
+function openTour(){
+  tourStep = 0;
+  renderTourStep();
+  tourOverlay.classList.remove('hidden');
+}
 
 function maybeShowTour(){
   const isReturningUser = !!(state.profile.age || state.targets.kcal); // ha già dati salvati
@@ -1124,19 +1183,24 @@ function maybeShowTour(){
     return;
   }
   if(!state.tourSeen){
-    tourOverlay.classList.remove('hidden');
+    openTour();
   }
 }
 
-document.getElementById('btnTourOk').addEventListener('click', ()=>{
-  tourOverlay.classList.add('hidden');
-  state.tourSeen = true;
-  saveState();
+document.getElementById('btnTourNext').addEventListener('click', ()=>{
+  if(tourStep < TOUR_STEPS - 1){
+    tourStep++;
+    renderTourStep();
+  } else {
+    tourOverlay.classList.add('hidden');
+    state.tourSeen = true;
+    saveState();
+  }
 });
-
-document.getElementById('btnShowTour').addEventListener('click', ()=>{
-  tourOverlay.classList.remove('hidden');
+document.getElementById('btnTourBack').addEventListener('click', ()=>{
+  if(tourStep > 0){ tourStep--; renderTourStep(); }
 });
+document.getElementById('btnShowTour').addEventListener('click', openTour);
 
 // al primo caricamento: se la chiave c'è già, valuto subito se mostrare il tour
 // (se manca la chiave, ci penserà btnOnboardingOk una volta inserita)
