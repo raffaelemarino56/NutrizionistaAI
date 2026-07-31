@@ -51,6 +51,18 @@ Serve una chiave API di Google Gemini (piano gratuito sufficiente per l'uso pers
 
 Il modello predefinito è `gemini-3.5-flash` ed è modificabile nel pannello "Connessione Gemini" (con suggerimenti dei modelli disponibili).
 
+## Primo avvio
+
+Al primo accesso parte un breve **wizard di onboarding** in 5 passi, pensato per spiegarti l'app *prima* di chiederti di configurarla:
+
+1. **Cos'è NutrizionistaAI** — a cosa serve e come ti aiuta.
+2. **La chiave Gemini** — guida per ottenerla e campo per incollarla (passo obbligatorio: senza chiave non si prosegue).
+3. **Imposta il profilo** — età, peso, altezza, attività, obiettivo.
+4. **Chiedi i target all'AI** — come farti proporre kcal e macro.
+5. **Il diario di tutti i giorni** — diario, suggerimenti pasto, check settimanale e uso offline.
+
+Puoi rivedere la spiegazione in qualsiasi momento con il pulsante **ℹ️ Guida** in alto: se la chiave è già impostata, il wizard salta il passo della chiave e mostra solo le funzionalità.
+
 ## Uso in locale
 
 Il service worker richiede `http(s)://` (non funziona aprendo il file con `file://`), quindi servi la cartella con un server statico. Con Python:

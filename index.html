@@ -312,45 +312,25 @@
 </head>
 <body>
 
-<div class="onboarding-overlay hidden" id="onboardingOverlay" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
+<!-- Wizard di onboarding unificato: prima spiega l'app, poi fa impostare la chiave,
+     poi mostra le funzionalita. In modalita "guida" (pulsante info in header) lo step
+     della chiave viene saltato se e gia impostata. -->
+<div class="onboarding-overlay hidden" id="wizardOverlay" role="dialog" aria-modal="true" aria-labelledby="wizardTitle">
   <div class="onboarding-card">
-    <div class="eyebrow">Prima di iniziare</div>
-    <h1 id="onboardingTitle" style="font-size:19px;margin:6px 0 4px;">Serve la tua chiave Gemini</h1>
-    <p class="small" style="margin-bottom:18px;">L'app usa Gemini per generare i consigli nutrizionali. La chiave resta solo nel tuo telefono/browser, non viene mai inviata altrove.</p>
+    <button class="modal-close" id="btnWizardClose" type="button" aria-label="Chiudi" style="display:none;">✕</button>
 
-    <div class="field">
-      <label>Chiave API Gemini</label>
-      <input type="password" id="apiKeyOnboarding" placeholder="incolla qui la tua API key">
-    </div>
-    <div class="small" id="onboardingError" style="color:var(--danger);min-height:16px;margin:-6px 0 10px;"></div>
-
-    <details class="key-guide" open>
-      <summary>Non hai una chiave? Te la faccio ottenere in 30 secondi ↓</summary>
-      <ol class="stepper">
-        <li><span class="step-num">1</span><div><strong>Apri Google AI Studio</strong><br>Con lo stesso account Google che usi di solito. È gratis, non serve carta di credito.</div></li>
-        <li><span class="step-num">2</span><div><strong>Clicca "Create API key"</strong><br>Il pulsante blu in alto a destra nella pagina.</div></li>
-        <li><span class="step-num">3</span><div><strong>Copia il codice</strong><br>Inizia con "AIza...". Fai tap per copiarlo.</div></li>
-        <li><span class="step-num">4</span><div><strong>Incollalo nel campo qui sopra</strong><br>Resta solo nel tuo telefono, non lo vede nessun altro.</div></li>
-      </ol>
-      <button class="ghost" id="btnOpenAIStudioOnboarding" type="button" style="width:100%;">Apri Google AI Studio ↗</button>
-    </details>
-
-    <button class="primary" id="btnOnboardingOk" style="width:100%;margin-top:16px;">OK, ho la chiave →</button>
-  </div>
-</div>
-
-<div class="onboarding-overlay hidden" id="tourOverlay" role="dialog" aria-modal="true" aria-label="Tour introduttivo dell'app">
-  <div class="onboarding-card">
-
-    <div class="tour-dots">
+    <div class="tour-dots" id="wizardDots">
       <span class="dot" data-dot="0"></span>
       <span class="dot" data-dot="1"></span>
       <span class="dot" data-dot="2"></span>
+      <span class="dot" data-dot="3"></span>
+      <span class="dot" data-dot="4"></span>
     </div>
 
-    <div class="tour-step" data-step="0">
+    <!-- STEP 0 — cos'e l'app -->
+    <div class="wizard-step" data-step="0">
       <div class="eyebrow">Benvenuto</div>
-      <h1 style="font-size:19px;margin:6px 0 10px;">Cos'è NutrizionistaAI</h1>
+      <h1 id="wizardTitle" style="font-size:19px;margin:6px 0 10px;">Cos'è NutrizionistaAI</h1>
       <p class="small" style="font-size:13.5px;line-height:1.6;margin-bottom:14px;">
         È il tuo coach nutrizionale AI, pensato per la ricomposizione corporea: ti aiuta a restare nei tuoi target di kcal e macro giorno per giorno, adattandosi ai pasti reali che fai — anche quando escono dal piano — con l'obiettivo di farti perdere grasso preservando il più possibile la massa magra.
       </p>
@@ -362,27 +342,67 @@
       </ul>
     </div>
 
-    <div class="tour-step" data-step="1" style="display:none;">
-      <div class="eyebrow">Passo 1 di 2</div>
+    <!-- STEP 1 — la chiave (bloccante) -->
+    <div class="wizard-step" data-step="1" style="display:none;">
+      <div class="eyebrow">Passo 1 · La chiave</div>
+      <h1 style="font-size:19px;margin:6px 0 4px;">Serve la tua chiave Gemini</h1>
+      <p class="small" style="margin-bottom:16px;">L'app usa Gemini per generare i consigli. La chiave resta solo sul tuo dispositivo; i tuoi contenuti vengono inviati a Google solo quando chiedi un consiglio all'AI.</p>
+
+      <div class="field">
+        <label for="apiKeyWizard">Chiave API Gemini</label>
+        <input type="password" id="apiKeyWizard" placeholder="incolla qui la tua API key" autocomplete="off">
+      </div>
+      <div class="small" id="wizardKeyError" style="color:var(--danger);min-height:16px;margin:-6px 0 10px;"></div>
+
+      <details class="key-guide" open>
+        <summary>Non hai una chiave? Te la faccio ottenere in 30 secondi ↓</summary>
+        <ol class="stepper">
+          <li><span class="step-num">1</span><div><strong>Apri Google AI Studio</strong><br>Con lo stesso account Google che usi di solito. È gratis, non serve carta di credito.</div></li>
+          <li><span class="step-num">2</span><div><strong>Clicca "Create API key"</strong><br>Il pulsante blu in alto a destra nella pagina.</div></li>
+          <li><span class="step-num">3</span><div><strong>Copia il codice</strong><br>Inizia con "AIza...". Fai tap per copiarlo.</div></li>
+          <li><span class="step-num">4</span><div><strong>Incollalo nel campo qui sopra</strong><br>Resta solo sul tuo dispositivo, non lo vede nessun altro.</div></li>
+        </ol>
+        <button class="ghost" id="btnOpenAIStudioWizard" type="button" style="width:100%;">Apri Google AI Studio ↗</button>
+      </details>
+    </div>
+
+    <!-- STEP 2 — profilo -->
+    <div class="wizard-step" data-step="2" style="display:none;">
+      <div class="eyebrow">Passo 2 · Profilo</div>
       <h1 style="font-size:19px;margin:6px 0 10px;">Imposta il tuo profilo</h1>
       <p class="small" style="font-size:13.5px;line-height:1.6;margin-bottom:14px;">
-        Prima di tutto, compila i tuoi dati nel pannello <span class="tour-tag">Il tuo profilo</span> a sinistra: età, peso, altezza, livello di attività e obiettivo. Servono all'AI per calcolare un fabbisogno energetico su misura per te, non generico.
+        Compila i tuoi dati nel pannello <span class="tour-tag">Il tuo profilo</span> a sinistra: età, peso, altezza, livello di attività e obiettivo. Servono all'AI per calcolare un fabbisogno su misura per te, non generico.
       </p>
-      <p class="small" style="font-size:12.5px;">Non preoccuparti di essere troppo preciso: potrai sempre aggiornarli più avanti.</p>
+      <p class="small" style="font-size:12.5px;">Non serve essere precisissimo: potrai aggiornarli quando vuoi.</p>
     </div>
 
-    <div class="tour-step" data-step="2" style="display:none;">
-      <div class="eyebrow">Passo 2 di 2</div>
-      <h1 style="font-size:19px;margin:6px 0 10px;">Chiedi il tuo target all'AI</h1>
+    <!-- STEP 3 — target -->
+    <div class="wizard-step" data-step="3" style="display:none;">
+      <div class="eyebrow">Passo 3 · Target</div>
+      <h1 style="font-size:19px;margin:6px 0 10px;">Chiedi i target all'AI</h1>
       <p class="small" style="font-size:13.5px;line-height:1.6;margin-bottom:14px;">
-        Una volta compilato il profilo, vai nel pannello <span class="tour-tag">Target giornalieri</span> e premi <strong>"Chiedi all'AI di proporre i target"</strong>: calcolerà kcal, proteine, carboidrati e grassi adatti al tuo obiettivo di definizione.
+        Nel pannello <span class="tour-tag">Target giornalieri</span> premi <strong>"Chiedi all'AI di proporre i target"</strong>: calcolerà kcal, proteine, carboidrati e grassi adatti al tuo obiettivo. Puoi sempre correggerli a mano.
       </p>
-      <p class="small" style="font-size:12.5px;">Da lì in poi basta scrivere cosa mangi nel diario in basso: il resto lo fa l'AI.</p>
     </div>
 
-    <div class="row" style="margin-top:6px;">
-      <button class="ghost" id="btnTourBack" style="display:none;">← Indietro</button>
-      <button class="primary" id="btnTourNext" style="flex:1;">Avanti →</button>
+    <!-- STEP 4 — uso quotidiano -->
+    <div class="wizard-step" data-step="4" style="display:none;">
+      <div class="eyebrow">Passo 4 · Ogni giorno</div>
+      <h1 style="font-size:19px;margin:6px 0 10px;">Il diario di tutti i giorni</h1>
+      <p class="small" style="font-size:13.5px;line-height:1.6;margin-bottom:12px;">
+        Scrivi cosa mangi nel <span class="tour-tag">Diario alimentare</span>: l'AI stima i macro e aggiorna i contatori. Da lì hai anche:
+      </p>
+      <ul class="tour-bullets">
+        <li>💡 <strong>Suggerimenti pasto</strong> sui macro che ti restano</li>
+        <li>✏️ Aggiungi o correggi i pasti anche a mano</li>
+        <li>⚖️ <strong>Check settimanale</strong> di peso e sensazioni</li>
+        <li>📴 Funziona anche <strong>offline</strong>: i pasti si salvano e l'AI li stima al ritorno online</li>
+      </ul>
+    </div>
+
+    <div class="row" style="margin-top:16px;">
+      <button class="ghost" id="btnWizardBack" style="display:none;">← Indietro</button>
+      <button class="primary" id="btnWizardNext" style="flex:1;">Avanti →</button>
     </div>
   </div>
 </div>
@@ -1582,7 +1602,7 @@ function saveMealEditor(){
 
 // ---------- focus management dei modali (trap Tab + Esc) ----------
 function getOpenOverlay(){
-  const ids = ['onboardingOverlay','tourOverlay','mealEditorOverlay'];
+  const ids = ['wizardOverlay','mealEditorOverlay'];
   for(const id of ids){
     const el = document.getElementById(id);
     if(el && !el.classList.contains('hidden')) return el;
@@ -1600,9 +1620,9 @@ document.addEventListener('keydown', (e)=>{
     if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
     else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
   } else if(e.key === 'Escape'){
-    // l'onboarding (blocco chiave) non e chiudibile con Esc
     if(overlay.id === 'mealEditorOverlay'){ closeMealEditor(); }
-    else if(overlay.id === 'tourOverlay'){ overlay.classList.add('hidden'); state.tourSeen = true; saveState(); }
+    // il wizard si chiude con Esc solo in modalita "guida" (l'onboarding e bloccante)
+    else if(overlay.id === 'wizardOverlay' && wizardMode === 'guide'){ closeWizard(); }
   }
 });
 
@@ -1666,91 +1686,116 @@ requestPersistentStorage();
 const keyGuide = document.getElementById('keyGuideDetails');
 if(!state.profile.apiKey){ keyGuide.open = true; }
 
-// ---------- overlay di onboarding: blocca l'app finché non c'è una chiave valida ----------
-const onboardingOverlay = document.getElementById('onboardingOverlay');
-if(!state.profile.apiKey){
-  document.getElementById('apiKeyOnboarding').value = '';
-  onboardingOverlay.classList.remove('hidden');
-  setTimeout(()=>{ const el = document.getElementById('apiKeyOnboarding'); if(el) el.focus(); }, 50);
+// ---------- wizard di onboarding unificato ----------
+// Ordine: 0) cos'e l'app · 1) chiave (bloccante) · 2) profilo · 3) target · 4) uso quotidiano.
+// Si apre da solo al primo accesso (senza chiave); riapribile dalla ℹ️ Guida.
+const wizardOverlay = document.getElementById('wizardOverlay');
+const WIZARD_KEY_STEP = 1;      // indice (assoluto) dello step della chiave, bloccante
+let wizardStep = 0;             // posizione corrente TRA GLI STEP VISIBILI
+let wizardMode = 'full';        // 'full' = onboarding completo | 'guide' = ripasso dalla Guida
+let wizardLastFocused = null;
+
+// in modalita "guida", se la chiave e gia impostata, salto lo step della chiave
+function wizardVisibleSteps(){
+  const all = [0, 1, 2, 3, 4];
+  if(wizardMode === 'guide' && state.profile.apiKey){
+    return all.filter(s => s !== WIZARD_KEY_STEP);
+  }
+  return all;
 }
 
-document.getElementById('btnOpenAIStudioOnboarding').addEventListener('click', ()=>{
+function renderWizardStep(){
+  const visible = wizardVisibleSteps();
+  const current = visible[wizardStep];
+
+  document.querySelectorAll('#wizardOverlay .wizard-step').forEach(el=>{
+    el.style.display = (Number(el.dataset.step) === current) ? 'block' : 'none';
+  });
+
+  document.querySelectorAll('#wizardDots .dot').forEach(d=>{
+    const idx = visible.indexOf(Number(d.dataset.dot));
+    d.style.display = (idx === -1) ? 'none' : 'inline-block';
+    d.classList.toggle('active', idx === wizardStep);
+  });
+
+  document.getElementById('btnWizardBack').style.display = (wizardStep === 0) ? 'none' : 'inline-flex';
+  const isLast = (wizardStep === visible.length - 1);
+  const nextBtn = document.getElementById('btnWizardNext');
+  nextBtn.textContent = (current === WIZARD_KEY_STEP) ? 'Salva la chiave e continua →'
+                        : (isLast ? 'Inizia →' : 'Avanti →');
+
+  // la X di chiusura c'e solo in modalita guida (l'onboarding e bloccante)
+  document.getElementById('btnWizardClose').style.display = (wizardMode === 'guide') ? 'flex' : 'none';
+
+  setTimeout(()=>{
+    if(current === WIZARD_KEY_STEP){ const el = document.getElementById('apiKeyWizard'); if(el) el.focus(); }
+    else { nextBtn.focus(); }
+  }, 40);
+}
+
+function openWizard(mode){
+  wizardMode = mode || 'full';
+  wizardStep = 0;
+  document.getElementById('wizardKeyError').textContent = '';
+  document.getElementById('apiKeyWizard').value = state.profile.apiKey || '';
+  wizardLastFocused = document.activeElement;
+  wizardOverlay.classList.remove('hidden');
+  renderWizardStep();
+}
+
+function closeWizard(){
+  wizardOverlay.classList.add('hidden');
+  state.tourSeen = true;
+  saveState();
+  if(wizardLastFocused && wizardLastFocused.focus) wizardLastFocused.focus();
+}
+
+function wizardNext(){
+  const visible = wizardVisibleSteps();
+  const current = visible[wizardStep];
+
+  // step della chiave: valido e salvo prima di proseguire
+  if(current === WIZARD_KEY_STEP){
+    const value = document.getElementById('apiKeyWizard').value.trim();
+    const errEl = document.getElementById('wizardKeyError');
+    if(!value){
+      errEl.textContent = 'Inserisci la chiave per continuare, oppure segui i passaggi qui sotto per ottenerne una.';
+      return;
+    }
+    errEl.textContent = '';
+    document.getElementById('apiKey').value = value; // sincronizzo col pannello impostazioni
+    saveProfileFromUI();
+  }
+
+  if(wizardStep < visible.length - 1){
+    wizardStep++;
+    renderWizardStep();
+  } else {
+    closeWizard();
+  }
+}
+
+function wizardBack(){
+  if(wizardStep > 0){ wizardStep--; renderWizardStep(); }
+}
+
+document.getElementById('btnWizardNext').addEventListener('click', wizardNext);
+document.getElementById('btnWizardBack').addEventListener('click', wizardBack);
+document.getElementById('btnWizardClose').addEventListener('click', closeWizard);
+document.getElementById('btnShowTour').addEventListener('click', ()=> openWizard('guide'));
+document.getElementById('btnOpenAIStudioWizard').addEventListener('click', ()=>{
   window.open('https://aistudio.google.com/apikey', '_blank', 'noopener');
 });
-
-document.getElementById('btnOnboardingOk').addEventListener('click', ()=>{
-  const value = document.getElementById('apiKeyOnboarding').value.trim();
-  const errorEl = document.getElementById('onboardingError');
-  if(!value){
-    errorEl.textContent = 'Inserisci la chiave per continuare, oppure seguila i passaggi qui sotto per ottenerne una.';
-    return;
-  }
-  errorEl.textContent = '';
-  document.getElementById('apiKey').value = value; // sincronizzo col pannello impostazioni
-  saveProfileFromUI();
-  onboardingOverlay.classList.add('hidden');
-  maybeShowTour();
+document.getElementById('apiKeyWizard').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){ e.preventDefault(); wizardNext(); }
 });
 
-// invio con Enter anche dal campo dell'overlay
-document.getElementById('apiKeyOnboarding').addEventListener('keydown', (e)=>{
-  if(e.key==='Enter'){ e.preventDefault(); document.getElementById('btnOnboardingOk').click(); }
-});
-
-// ---------- tour guidato "come funziona l'app" (wizard a schermate, solo per utenti nuovi) ----------
-const tourOverlay = document.getElementById('tourOverlay');
-const TOUR_STEPS = 3;
-let tourStep = 0;
-
-function renderTourStep(){
-  document.querySelectorAll('.tour-step').forEach(el=>{
-    el.style.display = (Number(el.dataset.step) === tourStep) ? 'block' : 'none';
-  });
-  document.querySelectorAll('.tour-dots .dot').forEach(d=>{
-    d.classList.toggle('active', Number(d.dataset.dot) === tourStep);
-  });
-  document.getElementById('btnTourBack').style.display = tourStep === 0 ? 'none' : 'inline-flex';
-  document.getElementById('btnTourNext').textContent = (tourStep === TOUR_STEPS - 1) ? 'Ho capito, inizia →' : 'Avanti →';
+// avvio: senza chiave apro il wizard completo; se la chiave c'e gia, non disturbo
+if(!state.profile.apiKey){
+  openWizard('full');
+} else {
+  state.tourSeen = true;
 }
-
-function openTour(){
-  tourStep = 0;
-  renderTourStep();
-  tourOverlay.classList.remove('hidden');
-  setTimeout(()=>{ const el = document.getElementById('btnTourNext'); if(el) el.focus(); }, 50);
-}
-
-function maybeShowTour(){
-  const isReturningUser = !!(state.profile.age || state.targets.kcal); // ha già dati salvati
-  if(isReturningUser && !state.tourSeen){
-    // dati da prima che esistesse questa funzionalità: non disturbare chi usa già l'app
-    state.tourSeen = true;
-    saveState();
-    return;
-  }
-  if(!state.tourSeen){
-    openTour();
-  }
-}
-
-document.getElementById('btnTourNext').addEventListener('click', ()=>{
-  if(tourStep < TOUR_STEPS - 1){
-    tourStep++;
-    renderTourStep();
-  } else {
-    tourOverlay.classList.add('hidden');
-    state.tourSeen = true;
-    saveState();
-  }
-});
-document.getElementById('btnTourBack').addEventListener('click', ()=>{
-  if(tourStep > 0){ tourStep--; renderTourStep(); }
-});
-document.getElementById('btnShowTour').addEventListener('click', openTour);
-
-// al primo caricamento: se la chiave c'è già, valuto subito se mostrare il tour
-// (se manca la chiave, ci penserà btnOnboardingOk una volta inserita)
-if(state.profile.apiKey){ maybeShowTour(); }
 
 // ---------- PWA: installazione + service worker ----------
 if('serviceWorker' in navigator){
