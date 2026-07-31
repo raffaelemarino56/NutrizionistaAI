@@ -116,8 +116,16 @@
   .gauge.completed{border-color:var(--accent);}
   .gauge.completed .nums{color:var(--on-accent);}
   .gauge.completed .bar>div{background:var(--accent) !important;}
+  .check-icon{display:none;margin-left:3px;font-size:11px;}
+  .gauge.completed .check-icon{display:inline;}
+  @keyframes gaugePop{0%{transform:scale(1);}35%{transform:scale(1.06);}100%{transform:scale(1);}}
+  .gauge.pop{animation:gaugePop .35s ease;}
 
   .banner{background:var(--carbs-container);border:1px solid transparent;border-radius:var(--radius);padding:14px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;color:var(--on-carbs-container);}
+
+  .next-step-banner{grid-column:1/-1;background:var(--protein-container);color:var(--on-protein-container);border-radius:var(--radius);padding:13px 18px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13.5px;font-weight:500;}
+  .next-step-dismiss{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:transparent;border:none;color:var(--on-protein-container);opacity:.6;font-size:12px;padding:0;}
+  .next-step-dismiss:hover{opacity:1;background:rgba(0,0,0,.06);}
   .banner strong{color:var(--carbs);}
   .banner p{margin:0;font-size:13.5px;}
 
@@ -200,6 +208,10 @@
   .meal-row-remove:hover{background:var(--danger);border-color:var(--danger);color:#FFFFFF;}
 
   .sugg-controls{display:flex;gap:10px;margin-bottom:14px;}
+
+  .pill-group{display:flex;gap:8px;flex-wrap:wrap;}
+  .pill-group .pill{background:var(--surface-2);border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:8px 14px;font-size:13px;font-weight:500;white-space:nowrap;}
+  .pill-group .pill.active{background:var(--protein-container);color:var(--on-protein-container);border-color:transparent;font-weight:700;}
   .sugg-controls select{flex:1;}
   .sugg-cards{display:flex;flex-direction:column;gap:12px;}
   .sugg-card{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;}
@@ -310,10 +322,16 @@
 
 <div class="wrap">
 
+  <div class="next-step-banner" id="nextStepBanner" style="display:none;">
+    <span id="nextStepText"></span>
+    <button class="next-step-dismiss" id="btnDismissNextStep" title="Nascondi per ora">✕</button>
+  </div>
+
+
   <!-- LEFT COLUMN: profile & setup -->
   <div>
     <details class="panel" open id="panelGemini">
-      <summary><h2>Connessione Gemini</h2><span class="summary-hint" id="hintGemini"></span></summary>
+      <summary><h2>🔌 Connessione Gemini</h2><span class="summary-hint" id="hintGemini"></span></summary>
       <div class="panel-body">
       <div class="field">
         <label>Chiave API Gemini</label>
@@ -340,7 +358,7 @@
     </details>
 
     <details class="panel" open id="panelProfilo">
-      <summary><h2>Il tuo profilo</h2><span class="summary-hint" id="hintProfilo"></span></summary>
+      <summary><h2>👤 Il tuo profilo</h2><span class="summary-hint" id="hintProfilo"></span></summary>
       <div class="panel-body">
       <div class="row">
         <div class="field"><label>Età</label><input type="number" id="age"></div>
@@ -375,7 +393,7 @@
     </details>
 
     <details class="panel" open id="panelTarget">
-      <summary><h2>Target giornalieri</h2><span class="summary-hint" id="hintTarget"></span></summary>
+      <summary><h2>🎯 Target giornalieri</h2><span class="summary-hint" id="hintTarget"></span></summary>
       <div class="panel-body">
       <div class="row">
         <div class="field"><label>Kcal</label><input type="number" id="tKcal"></div>
@@ -390,7 +408,7 @@
     </details>
 
     <div class="panel">
-      <h2>Calendario giornate</h2>
+      <h2>📅 Calendario giornate</h2>
       <div class="cal-header">
         <button class="navbtn" id="calPrev">‹</button>
         <div class="monthlabel" id="calMonthLabel">-</div>
@@ -401,7 +419,7 @@
     </div>
 
     <details class="panel" open id="panelCheck">
-      <summary><h2>Check settimanale</h2><span class="summary-hint" id="hintCheck"></span></summary>
+      <summary><h2>⚖️ Check settimanale</h2><span class="summary-hint" id="hintCheck"></span></summary>
       <div class="panel-body">
       <div class="weeklylog" id="weeklyLog"><div class="small">Nessun check ancora registrato.</div></div>
       <div class="field" style="margin-top:12px;">
@@ -425,28 +443,28 @@
     </div>
 
     <div class="gauges">
-      <div class="gauge kcal" id="gKcal"><div class="label">Kcal</div><div class="nums"><span id="vKcal">0</span> <small>/ <span id="tKcalShow">-</span></small></div><div class="bar"><div id="bKcal" style="width:0%"></div></div></div>
-      <div class="gauge protein" id="gProtein"><div class="label">Proteine</div><div class="nums"><span id="vProtein">0</span>g <small>/ <span id="tProteinShow">-</span>g</small></div><div class="bar"><div id="bProtein" style="width:0%"></div></div></div>
-      <div class="gauge carbs" id="gCarbs"><div class="label">Carboidrati</div><div class="nums"><span id="vCarbs">0</span>g <small>/ <span id="tCarbsShow">-</span>g</small></div><div class="bar"><div id="bCarbs" style="width:0%"></div></div></div>
-      <div class="gauge fat" id="gFat"><div class="label">Grassi</div><div class="nums"><span id="vFat">0</span>g <small>/ <span id="tFatShow">-</span>g</small></div><div class="bar"><div id="bFat" style="width:0%"></div></div></div>
+      <div class="gauge kcal" id="gKcal"><div class="label">🔥 Kcal<span class="check-icon">✅</span></div><div class="nums"><span id="vKcal">0</span> <small>/ <span id="tKcalShow">-</span></small></div><div class="bar"><div id="bKcal" style="width:0%"></div></div></div>
+      <div class="gauge protein" id="gProtein"><div class="label">🥩 Proteine<span class="check-icon">✅</span></div><div class="nums"><span id="vProtein">0</span>g <small>/ <span id="tProteinShow">-</span>g</small></div><div class="bar"><div id="bProtein" style="width:0%"></div></div></div>
+      <div class="gauge carbs" id="gCarbs"><div class="label">🍞 Carboidrati<span class="check-icon">✅</span></div><div class="nums"><span id="vCarbs">0</span>g <small>/ <span id="tCarbsShow">-</span>g</small></div><div class="bar"><div id="bCarbs" style="width:0%"></div></div></div>
+      <div class="gauge fat" id="gFat"><div class="label">🥑 Grassi<span class="check-icon">✅</span></div><div class="nums"><span id="vFat">0</span>g <small>/ <span id="tFatShow">-</span>g</small></div><div class="bar"><div id="bFat" style="width:0%"></div></div></div>
     </div>
 
     <details class="panel" open id="panelMeals">
-      <summary><h2>Pasti registrati oggi</h2><span class="summary-hint" id="hintMeals">0 pasti</span></summary>
+      <summary><h2>🍽️ Pasti registrati oggi</h2><span class="summary-hint" id="hintMeals">0 pasti</span></summary>
       <div class="panel-body">
         <div id="mealsList"><div class="small">Nessun pasto registrato ancora oggi.</div></div>
       </div>
     </details>
 
     <div class="panel">
-      <h2>Suggerimenti pasto</h2>
+      <h2>💡 Suggerimenti pasto</h2>
       <div class="sugg-controls">
-        <select id="suggMealType">
-          <option value="colazione">Colazione</option>
-          <option value="pranzo" selected>Pranzo</option>
-          <option value="cena">Cena</option>
-          <option value="spuntino">Spuntino</option>
-        </select>
+        <div class="pill-group" id="suggMealTypeGroup" data-value="pranzo">
+          <button type="button" class="pill" data-val="colazione">🌅 Colazione</button>
+          <button type="button" class="pill active" data-val="pranzo">🍝 Pranzo</button>
+          <button type="button" class="pill" data-val="cena">🌙 Cena</button>
+          <button type="button" class="pill" data-val="spuntino">🍎 Spuntino</button>
+        </div>
         <button class="primary" id="btnSuggMeal">Proponi idee</button>
       </div>
       <div class="sugg-cards" id="suggCards">
@@ -455,19 +473,19 @@
     </div>
 
     <div class="panel">
-      <h2>Diario alimentare — oggi</h2>
+      <h2>💬 Diario alimentare — oggi</h2>
       <div class="chat" id="chatLog">
         <div class="msg ai"><div class="tag">Coach AI</div>Ciao! Sono il tuo nutrizionista sportivo AI. Compila il profilo a sinistra, imposta i target (o chiedimi di proporteli), poi scrivimi qui cosa mangi durante la giornata: calcolerò i macro rimanenti e ti proporrò i pasti successivi per restare in target.</div>
       </div>
       <div class="field" style="margin-bottom:10px;">
         <label>Categoria pasto</label>
-        <select id="mealCategory">
-          <option value="colazione">Colazione</option>
-          <option value="spuntino">Spuntino</option>
-          <option value="pranzo" selected>Pranzo</option>
-          <option value="cena">Cena</option>
-          <option value="altro">Altro</option>
-        </select>
+        <div class="pill-group" id="mealCategoryGroup" data-value="pranzo">
+          <button type="button" class="pill" data-val="colazione">🌅 Colazione</button>
+          <button type="button" class="pill" data-val="spuntino">🍎 Spuntino</button>
+          <button type="button" class="pill active" data-val="pranzo">🍝 Pranzo</button>
+          <button type="button" class="pill" data-val="cena">🌙 Cena</button>
+          <button type="button" class="pill" data-val="altro">➕ Altro</button>
+        </div>
       </div>
       <div class="composer">
         <textarea id="mealInput" placeholder="Es: ho mangiato 150g di petto di pollo, 80g di riso e verdure miste..."></textarea>
@@ -582,6 +600,53 @@ function updateHints(){
 }
 
 // ---------- gauges ----------
+let previouslyCompleted = {}; // traccia quali macro erano già "completati" al render precedente
+let nextStepDismissed = false; // nascosto manualmente per questa sessione
+
+function updateNextStepBanner(){
+  const banner = document.getElementById('nextStepBanner');
+  const textEl = document.getElementById('nextStepText');
+  if(nextStepDismissed){ banner.style.display='none'; return; }
+
+  let message = null;
+  if(!state.profile.age || !state.profile.weight){
+    message = '👉 Prossimo passo: compila il tuo profilo qui sotto (età, peso, altezza, obiettivo).';
+  } else if(!state.targets.kcal){
+    message = '👉 Prossimo passo: vai su 🎯 Target giornalieri e chiedi il tuo obiettivo all\'AI.';
+  } else {
+    const hasAnyMealEver = Object.values(state.diary).some(d=>d.entries && d.entries.length>0);
+    if(!hasAnyMealEver){
+      message = '👉 Prossimo passo: scrivi il tuo primo pasto in 💬 Diario alimentare, qui sotto.';
+    }
+  }
+
+  if(message){
+    textEl.textContent = message;
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+document.getElementById('btnDismissNextStep').addEventListener('click', ()=>{
+  nextStepDismissed = true;
+  document.getElementById('nextStepBanner').style.display='none';
+});
+
+// ---------- gruppi di pulsanti pillola (categoria pasto) ----------
+function wirePillGroup(groupId){
+  const group = document.getElementById(groupId);
+  group.querySelectorAll('.pill').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      group.querySelectorAll('.pill').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      group.dataset.value = btn.dataset.val;
+    });
+  });
+}
+wirePillGroup('mealCategoryGroup');
+wirePillGroup('suggMealTypeGroup');
+
 function renderGauges(){
   const t = state.targets, s = today().totals;
   const map = [
@@ -598,9 +663,19 @@ function renderGauges(){
     const ratio = t[key] ? s[key]/t[key] : 0;
     const completed = t[key] && ratio >= 1 && ratio <= 1.08; // target raggiunto: evidenzia in accento
     const over = t[key] && ratio > 1.08; // sforato oltre l'8%: avviso
-    document.getElementById(gId).classList.toggle('completed', !!completed);
-    document.getElementById(gId).classList.toggle('over', !!over);
+    const gaugeEl = document.getElementById(gId);
+    gaugeEl.classList.toggle('completed', !!completed);
+    gaugeEl.classList.toggle('over', !!over);
+
+    // animazione "pop" solo nel momento in cui il macro DIVENTA completato, non ad ogni render
+    if(completed && !previouslyCompleted[key]){
+      gaugeEl.classList.remove('pop'); void gaugeEl.offsetWidth; // forza il replay dell'animazione
+      gaugeEl.classList.add('pop');
+    }
+    previouslyCompleted[key] = !!completed;
   });
+
+  updateNextStepBanner();
 }
 
 // ---------- chat rendering ----------
@@ -741,18 +816,43 @@ async function callAI(userPrompt, extraSystem){
     systemInstruction: { parts: [{ text: systemInstruction }] },
     contents: [{ role:'user', parts:[{ text: userPrompt }] }]
   };
-  const res = await fetch(url, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(body)
-  });
+
+  let res;
+  try{
+    res = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+  }catch(networkErr){
+    const e = new Error('network');
+    e.isNetworkError = true;
+    throw e;
+  }
+
   if(!res.ok){
     const errText = await res.text();
-    throw new Error('Errore Gemini API ('+res.status+'): '+errText.slice(0,300));
+    const e = new Error('Errore Gemini API ('+res.status+'): '+errText.slice(0,300));
+    e.status = res.status;
+    throw e;
   }
   const data = await res.json();
   const text = data?.candidates?.[0]?.content?.parts?.map(p=>p.text).join('') || '';
   return text;
+}
+
+// traduce errori tecnici (stati HTTP, problemi di rete) in messaggi comprensibili
+function friendlyError(err){
+  if(err && err.isNetworkError){
+    return 'Sembra tu sia offline, o non riesco a raggiungere il server. Controlla la connessione e riprova.';
+  }
+  const status = err && err.status;
+  if(status === 400) return 'La richiesta non è valida — riprova, e se il problema persiste controlla il modello impostato nelle Impostazioni.';
+  if(status === 401 || status === 403) return 'La chiave API non è valida o non è autorizzata. Controllala nel pannello "Connessione Gemini".';
+  if(status === 404) return 'Il modello indicato non esiste o non è disponibile. Controlla il nome del modello nelle Impostazioni.';
+  if(status === 429) return 'Hai fatto troppe richieste in poco tempo (limite della quota gratuita). Aspetta un minuto e riprova.';
+  if(status && status >= 500) return 'Il servizio AI ha un problema momentaneo dal suo lato. Riprova tra poco.';
+  return (err && err.message) ? err.message : 'Si è verificato un errore imprevisto. Riprova.';
 }
 
 function buildContext(){
@@ -816,7 +916,7 @@ Rispondi in due parti obbligatorie:
     const clean = stripBlock(raw,'MACROS');
 
     const day = today();
-    const category = document.getElementById('mealCategory').value;
+    const category = document.getElementById('mealCategoryGroup').dataset.value;
     const categoryLabel = nextMealLabel(day, category);
     day.entries.push({time:new Date().toISOString(), text, category, categoryLabel, ...macros});
     day.totals.kcal += Number(macros.kcal)||0;
@@ -833,7 +933,7 @@ Rispondi in due parti obbligatorie:
     saveState();
   }catch(err){
     removeLoadingBubble();
-    state.chatHistory.push({role:'ai', text: '⚠️ '+err.message});
+    state.chatHistory.push({role:'ai', text: '⚠️ '+friendlyError(err)});
     renderChat();
   } finally {
     btn.disabled = false;
@@ -876,7 +976,7 @@ Poi in 2-3 righe spiega brevemente la logica.`;
     state.chatHistory.push({role:'ai', text: '🎯 Target proposti — '+clean});
     renderChat();
   }catch(err){
-    alert(err.message);
+    alert(friendlyError(err));
   } finally {
     btn.disabled = false; btn.textContent = "Chiedi all'AI di proporre i target";
   }
@@ -903,6 +1003,8 @@ async function logWeeklyCheck(){
       renderChat();
       saveState();
     }catch(err){
+      state.chatHistory.push({role:'ai', text: '⚠️ '+friendlyError(err)});
+      renderChat();
       console.error(err);
     }
   }
@@ -911,7 +1013,7 @@ async function logWeeklyCheck(){
 // ---------- suggerimenti pasto ----------
 async function suggestMeal(){
   if(!state.profile.apiKey){ alert('Imposta prima la tua API key Gemini.'); return; }
-  const mealType = document.getElementById('suggMealType').value;
+  const mealType = document.getElementById('suggMealTypeGroup').dataset.value;
   const btn = document.getElementById('btnSuggMeal');
   const cardsEl = document.getElementById('suggCards');
   btn.disabled = true; btn.textContent = 'Genero idee...';
@@ -929,7 +1031,7 @@ Rispondi SOLO con questo blocco JSON, nient'altro prima o dopo:
     }
     renderSuggestions(suggestions, mealType);
   }catch(err){
-    cardsEl.innerHTML = `<div class="small">⚠️ ${escapeHtml(err.message)}</div>`;
+    cardsEl.innerHTML = `<div class="small">⚠️ ${escapeHtml(friendlyError(err))}</div>`;
   } finally {
     btn.disabled = false; btn.textContent = 'Proponi idee';
   }
